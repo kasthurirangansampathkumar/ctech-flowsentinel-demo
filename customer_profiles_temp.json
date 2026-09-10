@@ -1,0 +1,17 @@
+[
+  {
+    "cust_id": "CUST-901",
+    "name": "Acme Corp",
+    "tier": "ENTERPRISE"
+  },
+  {
+    "cust_id": "CUST-902",
+    "name": "Global Logistics",
+    "tier": "PREMIUM"
+  },
+  {
+    "cust_id": "CUST-903",
+    "name": "Apex Digital",
+    "tier": "STANDARD"
+  }
+]
