@@ -1,0 +1,442 @@
+<title>FlowSentinel Architecture</title>
+<style>
+  :root {
+    --paper: #f5f7f8;
+    --surface: #ffffff;
+    --border: #dde3e4;
+    --ink: #16232a;
+    --muted: #56676b;
+    --navy: #12314f;
+    --teal: #0f6e66;
+    --teal-tint: #e3f2f0;
+    --amber: #a15c00;
+    --amber-tint: #fbedd8;
+    --grey: #6b7684;
+    --grey-tint: #eef0f3;
+    --green: #1a7f4b;
+    --green-tint: #e6f4ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12181a;
+      --surface: #1a2226;
+      --border: #2c383c;
+      --ink: #e7edee;
+      --muted: #9aacb0;
+      --navy: #9fc4e8;
+      --teal: #4fbdb0;
+      --teal-tint: #163430;
+      --amber: #e0a552;
+      --amber-tint: #3a2c14;
+      --grey: #9aa5ac;
+      --grey-tint: #232b2e;
+      --green: #6fc98f;
+      --green-tint: #163326;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12181a;
+    --surface: #1a2226;
+    --border: #2c383c;
+    --ink: #e7edee;
+    --muted: #9aacb0;
+    --navy: #9fc4e8;
+    --teal: #4fbdb0;
+    --teal-tint: #163430;
+    --amber: #e0a552;
+    --amber-tint: #3a2c14;
+    --grey: #9aa5ac;
+    --grey-tint: #232b2e;
+    --green: #6fc98f;
+    --green-tint: #163326;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: Calibri, "Segoe UI", -apple-system, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 28px 80px; }
+  header { margin-bottom: 40px; }
+  .eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+  h1 { font-family: Cambria, Georgia, serif; font-size: 34px; font-weight: 700; margin: 0; color: var(--ink); text-wrap: balance; }
+  .dek { color: var(--muted); font-size: 15px; max-width: 68ch; margin-top: 12px; line-height: 1.5; }
+
+  nav.toc { display: flex; gap: 8px; margin: 28px 0 0; flex-wrap: wrap; }
+  nav.toc a {
+    font-size: 12.5px; font-weight: 600; color: var(--teal); text-decoration: none;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  }
+
+  figure { margin: 56px 0 0; }
+  .fig-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .fig-num { font-family: Cambria, serif; font-size: 13px; font-weight: 700; color: var(--teal); }
+  h2 { font-family: Cambria, Georgia, serif; font-size: 22px; font-weight: 700; margin: 0; color: var(--ink); }
+  figcaption { color: var(--muted); font-size: 13.5px; margin-top: 12px; max-width: 74ch; line-height: 1.5; }
+
+  .svg-frame {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; margin-top: 16px; overflow-x: auto;
+  }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; font-family: Calibri, "Segoe UI", sans-serif; }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">FlowSentinel AI — Reference Diagrams</p>
+    <h1>How the pieces actually connect</h1>
+    <p class="dek">Three diagrams, each drawn from the running code, not a proposal: how Gemini is actually called, how data moves through the GCP stack, and what a click on the Ticket Board actually does to a ticket's state.</p>
+    <nav class="toc">
+      <a href="#ai-flow">1 · AI Usage Flow</a>
+      <a href="#de-arch">2 · DE Architecture</a>
+      <a href="#demo-flow">3 · Demo Flow</a>
+    </nav>
+  </header>
+
+  <!-- ================================================================ -->
+  <!-- FIGURE 1 — AI USAGE FLOW                                          -->
+  <!-- ================================================================ -->
+  <figure id="ai-flow">
+    <div class="fig-head"><span class="fig-num">FIG. 1</span><h2>AI Usage Flow</h2></div>
+    <div class="svg-frame">
+      <svg viewBox="0 0 1040 460" role="img" aria-label="An agent function builds a prompt from ticket text and, for two agents, a real deterministic check. call_gemini checks the Demo/Production toggle: in Demo Mode it returns no result immediately; in Production Mode it calls Vertex AI Gemini 2.5 Flash, which either returns text or raises an error. Any path without real model text falls back to a fixed template. The result is tagged and appended to the ticket log.">
+        <defs>
+          <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.3" font-size="12.5">
+
+          <!-- Ticket text -->
+          <rect x="20" y="150" width="150" height="60" rx="8"/>
+          <text x="95" y="175" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">Ticket</text>
+          <text x="95" y="193" text-anchor="middle" fill="currentColor" stroke="none" font-size="11">title + description</text>
+
+          <!-- Agent function -->
+          <line x1="170" y1="180" x2="215" y2="180" marker-end="url(#arrow1)"/>
+          <text x="192" y="172" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">reads</text>
+          <rect x="215" y="140" width="180" height="80" rx="8"/>
+          <text x="305" y="165" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">Agent function</text>
+          <text x="305" y="182" text-anchor="middle" fill="currentColor" stroke="none" font-size="11">e.g. schema_drift_</text>
+          <text x="305" y="196" text-anchor="middle" fill="currentColor" stroke="none" font-size="11">recommend_agent()</text>
+
+          <!-- Grounding data (dashed, only 2 agents) -->
+          <line x1="305" y1="140" x2="305" y2="95" stroke-dasharray="4 3" marker-end="url(#arrow1)"/>
+          <rect x="205" y="30" width="200" height="60" rx="8" stroke-dasharray="4 3"/>
+          <text x="305" y="52" text-anchor="middle" fill="currentColor" stroke="none" font-size="11" font-weight="700">Real deterministic check</text>
+          <text x="305" y="68" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">GCS file-exists · blast-radius calc</text>
+          <text x="305" y="82" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">(2 of 13 agents only — grounds the prompt)</text>
+
+          <!-- to call_gemini -->
+          <line x1="395" y1="180" x2="445" y2="180" marker-end="url(#arrow1)"/>
+          <text x="420" y="172" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">builds prompt</text>
+          <rect x="445" y="140" width="160" height="80" rx="8"/>
+          <text x="525" y="170" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">call_gemini()</text>
+          <text x="525" y="188" text-anchor="middle" fill="currentColor" stroke="none" font-size="11">ai_agents.py</text>
+          <text x="525" y="203" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">shared by all 13</text>
+
+          <!-- Decision diamond: live? -->
+          <polygon points="680,180 730,150 780,180 730,210" />
+          <text x="730" y="176" text-anchor="middle" fill="currentColor" stroke="none" font-size="11" font-weight="700">Production</text>
+          <text x="730" y="190" text-anchor="middle" fill="currentColor" stroke="none" font-size="11" font-weight="700">Mode?</text>
+          <line x1="605" y1="180" x2="680" y2="180" marker-end="url(#arrow1)"/>
+
+          <!-- No branch -> fallback (down) -->
+          <line x1="730" y1="210" x2="730" y2="300" marker-end="url(#arrow1)"/>
+          <text x="742" y="230" fill="currentColor" stroke="none" font-size="11">No (Demo Mode)</text>
+
+          <!-- Yes branch -> Gemini (up/right) -->
+          <line x1="780" y1="180" x2="845" y2="180" marker-end="url(#arrow1)"/>
+          <text x="812" y="172" text-anchor="middle" fill="currentColor" stroke="none" font-size="11">Yes</text>
+
+          <!-- Vertex AI Gemini box -->
+          <rect x="845" y="130" width="175" height="100" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+          <text x="932" y="158" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">Vertex AI</text>
+          <text x="932" y="176" text-anchor="middle" fill="currentColor" stroke="none" font-size="12">gemini-2.5-flash</text>
+          <text x="932" y="196" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">us-central1</text>
+          <text x="932" y="212" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">ctech-flowsentinel-ai</text>
+
+          <!-- Gemini success -> down to ticket log (green) -->
+          <line x1="932" y1="230" x2="932" y2="300" marker-end="url(#arrow1)" stroke="var(--green)"/>
+          <text x="945" y="265" fill="var(--green)" stroke="none" font-size="11">response text</text>
+
+          <!-- Gemini error -> back down/left to fallback -->
+          <path d="M 890 230 Q 890 280 780 300" marker-end="url(#arrow1)" stroke="var(--amber)"/>
+          <text x="845" y="280" fill="var(--amber)" stroke="none" font-size="10.5">exception</text>
+          <text x="845" y="293" fill="var(--amber)" stroke="none" font-size="10.5">(no ADC / no model access)</text>
+
+          <!-- Fallback template box -->
+          <rect x="630" y="300" width="200" height="65" rx="8" stroke="var(--amber)"/>
+          <text x="730" y="325" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">Fallback template</text>
+          <text x="730" y="343" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">fixed narrative per agent</text>
+          <text x="730" y="357" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">— never blank</text>
+
+          <!-- Both converge -> ticket log -->
+          <line x1="730" y1="365" x2="820" y2="405" marker-end="url(#arrow1)" stroke="var(--amber)"/>
+          <line x1="932" y1="300" x2="850" y2="405" marker-end="url(#arrow1)" stroke="var(--green)"/>
+
+          <rect x="700" y="405" width="220" height="40" rx="8" fill="currentColor" fill-opacity="0.06"/>
+          <text x="810" y="430" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">Ticket log entry</text>
+
+          <!-- tags -->
+          <text x="590" y="420" text-anchor="middle" fill="var(--amber)" stroke="none" font-size="12" font-weight="700">📋 · Template</text>
+          <text x="1015" y="420" text-anchor="end" fill="var(--green)" stroke="none" font-size="12" font-weight="700">🧠 · Gemini</text>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--green)"></span>Real Gemini response</span>
+      <span><span class="sw" style="background:var(--amber)"></span>Fallback template</span>
+      <span><span class="sw" style="background:currentColor;opacity:.4"></span>Dashed = grounding step, only 2 of 13 agents</span>
+    </div>
+    <figcaption>Every one of the 13 agents in <code>ai_agents.py</code> funnels through the same <code>call_gemini()</code> function. Demo Mode never reaches Vertex AI at all — it's a hard branch on the toggle, not a try/except that happens to fail. Two agents (Source Feed Sentinel, Backfill Planning) run a real deterministic check first and hand Gemini the actual numbers, so it narrates real data instead of inventing plausible-sounding ones. Whichever path answers, the ticket log records which one did.</figcaption>
+  </figure>
+
+  <!-- ================================================================ -->
+  <!-- FIGURE 2 — DE ARCHITECTURE                                        -->
+  <!-- ================================================================ -->
+  <figure id="de-arch">
+    <div class="fig-head"><span class="fig-num">FIG. 2</span><h2>Data Engineering Architecture</h2></div>
+    <div class="svg-frame">
+      <svg viewBox="0 0 1040 620" role="img" aria-label="Vendor feeds land in a GCS bucket. Cloud Composer orchestrates loads from GCS into BigQuery raw_staging, then transforms into dw_analytics, and writes run metadata to de_ops_metadata. Cloud Logging captures failures and publishes them to a Pub/Sub topic. The Ops Dashboard, running on Cloud Run, reads pipeline and table status from Composer and BigQuery, reads a GitHub token from Secret Manager, calls Vertex AI Gemini to run agents, and calls the GitHub API to read and write Issues, Pull Requests, and the Projects board, which is what the on-call engineer and the org's GitHub org actually see as tickets.">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g font-size="12">
+
+          <!-- Zone labels -->
+          <text x="20" y="26" fill="var(--muted)" font-size="11" font-weight="700" letter-spacing="1">DATA LAYER</text>
+          <text x="20" y="345" fill="var(--muted)" font-size="11" font-weight="700" letter-spacing="1">OBSERVABILITY</text>
+          <text x="500" y="26" fill="var(--muted)" font-size="11" font-weight="700" letter-spacing="1">AI / OPS CONTROL PLANE</text>
+          <text x="840" y="26" fill="var(--muted)" font-size="11" font-weight="700" letter-spacing="1">TICKETING</text>
+
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <!-- Vendor feeds -->
+            <rect x="20" y="45" width="160" height="55" rx="8"/>
+            <!-- GCS -->
+            <rect x="20" y="145" width="160" height="60" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+            <!-- Composer -->
+            <rect x="270" y="145" width="160" height="60" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+            <!-- BigQuery raw_staging -->
+            <rect x="20" y="255" width="160" height="55" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+            <!-- BigQuery dw_analytics -->
+            <rect x="270" y="255" width="160" height="55" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+            <!-- de_ops_metadata + backfill_sandbox -->
+            <rect x="20" y="395" width="160" height="60" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+            <!-- Cloud Logging -->
+            <rect x="270" y="395" width="160" height="55" rx="8"/>
+            <!-- Pub/Sub -->
+            <rect x="270" y="490" width="160" height="55" rx="8"/>
+
+            <!-- Ops Dashboard (center, larger) -->
+            <rect x="500" y="145" width="220" height="90" rx="10" stroke="var(--navy)" stroke-width="2"/>
+            <!-- Secret Manager -->
+            <rect x="500" y="280" width="220" height="50" rx="8"/>
+            <!-- Vertex AI -->
+            <rect x="500" y="375" width="220" height="55" rx="8" stroke="var(--teal)" stroke-width="1.6"/>
+
+            <!-- GitHub -->
+            <rect x="840" y="145" width="180" height="55" rx="8" stroke="var(--amber)" stroke-width="1.6"/>
+            <rect x="840" y="235" width="180" height="55" rx="8" stroke="var(--amber)" stroke-width="1.6"/>
+            <rect x="840" y="325" width="180" height="55" rx="8" stroke="var(--amber)" stroke-width="1.6"/>
+
+            <!-- On-call engineer -->
+            <rect x="500" y="490" width="220" height="55" rx="8" stroke="var(--grey)" stroke-width="1.6"/>
+          </g>
+
+          <text x="100" y="68" text-anchor="middle" fill="currentColor" font-weight="700">Vendor feeds</text>
+          <text x="100" y="86" text-anchor="middle" fill="currentColor" font-size="10.5">SFTP/S3-style CSV, JSON</text>
+
+          <text x="100" y="170" text-anchor="middle" fill="currentColor" font-weight="700">GCS landing zone</text>
+          <text x="100" y="188" text-anchor="middle" fill="currentColor" font-size="10">vendor_ecom/, vendor_crm/</text>
+
+          <text x="350" y="170" text-anchor="middle" fill="currentColor" font-weight="700">Cloud Composer</text>
+          <text x="350" y="188" text-anchor="middle" fill="currentColor" font-size="10">sales_transformation_pipeline</text>
+
+          <text x="100" y="279" text-anchor="middle" fill="currentColor" font-weight="700">BigQuery</text>
+          <text x="100" y="296" text-anchor="middle" fill="currentColor" font-size="10.5">raw_staging</text>
+
+          <text x="350" y="279" text-anchor="middle" fill="currentColor" font-weight="700">BigQuery</text>
+          <text x="350" y="296" text-anchor="middle" fill="currentColor" font-size="10.5">dw_analytics</text>
+
+          <text x="100" y="420" text-anchor="middle" fill="currentColor" font-weight="700">BigQuery</text>
+          <text x="100" y="437" text-anchor="middle" fill="currentColor" font-size="9.5">de_ops_metadata,</text>
+          <text x="100" y="449" text-anchor="middle" fill="currentColor" font-size="9.5">backfill_sandbox</text>
+
+          <text x="350" y="420" text-anchor="middle" fill="currentColor" font-weight="700">Cloud Logging</text>
+          <text x="350" y="437" text-anchor="middle" fill="currentColor" font-size="10">failure log sink</text>
+
+          <text x="350" y="513" text-anchor="middle" fill="currentColor" font-weight="700">Pub/Sub</text>
+          <text x="350" y="530" text-anchor="middle" fill="currentColor" font-size="10">de-incidents-topic</text>
+
+          <text x="610" y="180" text-anchor="middle" fill="currentColor" font-weight="700" font-size="14">Ops Dashboard</text>
+          <text x="610" y="199" text-anchor="middle" fill="currentColor" font-size="10.5">Cloud Run · FastAPI</text>
+          <text x="610" y="215" text-anchor="middle" fill="currentColor" font-size="10">ticket_engine.py + ai_agents.py</text>
+
+          <text x="610" y="304" text-anchor="middle" fill="currentColor" font-weight="700">Secret Manager</text>
+          <text x="610" y="321" text-anchor="middle" fill="currentColor" font-size="10">github-pat-token</text>
+
+          <text x="610" y="399" text-anchor="middle" fill="currentColor" font-weight="700">Vertex AI</text>
+          <text x="610" y="416" text-anchor="middle" fill="currentColor" font-size="10">gemini-2.5-flash</text>
+
+          <text x="930" y="177" text-anchor="middle" fill="currentColor" font-weight="700">GitHub Issues</text>
+          <text x="930" y="267" text-anchor="middle" fill="currentColor" font-weight="700">Pull Requests</text>
+          <text x="930" y="357" text-anchor="middle" fill="currentColor" font-weight="700">Projects v2 board</text>
+
+          <text x="610" y="513" text-anchor="middle" fill="currentColor" font-weight="700">On-call engineer</text>
+          <text x="610" y="530" text-anchor="middle" fill="currentColor" font-size="10">1-click approve, in browser</text>
+
+          <!-- Arrows with labels -->
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <line x1="100" y1="100" x2="100" y2="145" marker-end="url(#arrow2)"/>
+            <line x1="180" y1="175" x2="270" y2="175" marker-end="url(#arrow2)"/>
+            <line x1="350" y1="205" x2="350" y2="255" marker-end="url(#arrow2)"/>
+            <line x1="100" y1="205" x2="100" y2="255" marker-end="url(#arrow2)"/>
+            <line x1="180" y1="282" x2="270" y2="282" marker-end="url(#arrow2)"/>
+            <line x1="100" y1="310" x2="100" y2="395" marker-end="url(#arrow2)"/>
+            <line x1="350" y1="310" x2="350" y2="395" marker-end="url(#arrow2)"/>
+            <line x1="350" y1="450" x2="350" y2="490" marker-end="url(#arrow2)"/>
+
+            <!-- Dashboard <-> data layer -->
+            <path d="M 430 280 C 465 280 465 210 500 195" marker-end="url(#arrow2)" stroke="var(--navy)"/>
+            <path d="M 430 175 C 465 175 465 190 500 190" marker-end="url(#arrow2)" stroke="var(--navy)"/>
+            <path d="M 430 515 C 465 515 465 240 500 222" marker-end="url(#arrow2)" stroke="var(--navy)"/>
+
+            <!-- Dashboard -> Secret Manager -->
+            <line x1="610" y1="235" x2="610" y2="280" marker-end="url(#arrow2)" stroke="var(--navy)"/>
+            <!-- Dashboard -> Vertex AI -->
+            <path d="M 640 235 C 670 270 670 355 630 375" marker-end="url(#arrow2)" stroke="var(--navy)"/>
+
+            <!-- Dashboard <-> GitHub -->
+            <path d="M 720 180 C 780 180 780 172 840 172" marker-end="url(#arrow2)" stroke="var(--amber)"/>
+            <path d="M 720 215 C 780 215 780 262 840 262" marker-end="url(#arrow2)" stroke="var(--amber)"/>
+            <path d="M 720 225 C 780 225 780 352 840 352" marker-end="url(#arrow2)" stroke="var(--amber)"/>
+
+            <!-- Dashboard <-> engineer -->
+            <line x1="610" y1="490" x2="610" y2="235" marker-end="url(#arrow2)" stroke="var(--grey)"/>
+          </g>
+
+          <g font-size="10" fill="currentColor">
+            <text x="225" y="170" text-anchor="middle">lands</text>
+            <text x="225" y="273" text-anchor="middle">loads</text>
+            <text x="60" y="235" text-anchor="middle">loads</text>
+            <text x="385" y="235" text-anchor="middle">transforms</text>
+            <text x="360" y="370" text-anchor="middle">failures</text>
+            <text x="55" y="358" text-anchor="middle" font-size="9">writes</text>
+            <text x="55" y="368" text-anchor="middle" font-size="9">metadata</text>
+            <text x="360" y="475" text-anchor="middle">publishes</text>
+            <text x="450" y="163">DAG status</text>
+            <text x="450" y="223">table freshness</text>
+            <text x="450" y="500">feed status</text>
+            <text x="628" y="260">fetches token</text>
+            <text x="700" y="310" text-anchor="middle" font-size="9.5">classify · diagnose</text>
+            <text x="700" y="321" text-anchor="middle" font-size="9.5">· fix</text>
+            <text x="765" y="163" text-anchor="middle" font-size="9.5">creates issue</text>
+            <text x="765" y="255" text-anchor="middle" font-size="9.5">opens / merges</text>
+            <text x="765" y="345" text-anchor="middle" font-size="9.5">syncs tickets</text>
+            <text x="662" y="352" text-anchor="middle" font-size="9.5">approve /</text>
+            <text x="662" y="363" text-anchor="middle" font-size="9.5">start fix</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--teal)"></span>Real GCP data path</span>
+      <span><span class="sw" style="background:var(--navy)"></span>Dashboard control-plane calls</span>
+      <span><span class="sw" style="background:var(--amber)"></span>GitHub (ticketing tool)</span>
+      <span><span class="sw" style="background:var(--grey)"></span>Human interaction</span>
+    </div>
+    <figcaption>The Ops Dashboard is the hub, not a bystander: it reads Composer's DAG state and BigQuery's table freshness directly (Fig. 2's Summary tab), fetches the GitHub token from Secret Manager rather than holding one itself, calls Vertex AI Gemini for every agent decision, and is the only thing that writes to GitHub Issues/PRs/Projects. Cloud Logging → Pub/Sub is the detection path Demo 1 was built around; the dashboard's Ticket Board is a second, dashboard-native entry point that doesn't require that pipeline to be wired up.</figcaption>
+  </figure>
+
+  <!-- ================================================================ -->
+  <!-- FIGURE 3 — DEMO FLOW                                              -->
+  <!-- ================================================================ -->
+  <figure id="demo-flow">
+    <div class="fig-head"><span class="fig-num">FIG. 3</span><h2>Demo Flow — Ticket State Machine</h2></div>
+    <div class="svg-frame">
+      <svg viewBox="0 0 1040 380" role="img" aria-label="On the Demo tab, Begin Demo or Inject a Single Failure creates a ticket in the New/Unclassified state. Clicking Run Issue Segment Agent on the Ticket Board moves it to one of three states: Autonomous Queue, AI-Assisted Queue, or Advisory, which is terminal. From Autonomous Queue, clicking Start Fix moves it directly to Resolved. From AI-Assisted Queue, clicking Start Analysis moves it to Awaiting Approval, and clicking Approve and Apply Fix from there moves it to Resolved.">
+        <defs>
+          <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g font-size="12">
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <rect x="20" y="150" width="150" height="70" rx="8" stroke="var(--grey)" stroke-width="1.6"/>
+            <rect x="235" y="150" width="170" height="70" rx="8"/>
+            <rect x="470" y="35" width="180" height="70" rx="8" stroke="var(--green)" stroke-width="1.6"/>
+            <rect x="470" y="150" width="180" height="70" rx="8" stroke="var(--amber)" stroke-width="1.6"/>
+            <rect x="470" y="270" width="180" height="65" rx="8" stroke="var(--grey)" stroke-width="1.6"/>
+            <rect x="720" y="150" width="150" height="70" rx="8" stroke="var(--amber)" stroke-width="1.6"/>
+            <rect x="900" y="90" width="130" height="70" rx="8" fill="currentColor" fill-opacity="0.06"/>
+          </g>
+
+          <text x="95" y="180" text-anchor="middle" fill="currentColor" font-weight="700">Demo tab</text>
+          <text x="95" y="198" text-anchor="middle" fill="currentColor" font-size="10.5">Begin Demo /</text>
+          <text x="95" y="212" text-anchor="middle" fill="currentColor" font-size="10.5">Inject a Failure</text>
+
+          <text x="320" y="178" text-anchor="middle" fill="currentColor" font-weight="700">New / Unclassified</text>
+          <text x="320" y="196" text-anchor="middle" fill="currentColor" font-size="10.5">ticket_engine.NEW</text>
+          <text x="320" y="212" text-anchor="middle" fill="currentColor" font-size="10.5">sits on the board</text>
+
+          <text x="560" y="68" text-anchor="middle" fill="currentColor" font-weight="700">Autonomous Queue</text>
+          <text x="560" y="86" text-anchor="middle" fill="currentColor" font-size="10.5">QUEUED_AUTONOMOUS</text>
+
+          <text x="560" y="180" text-anchor="middle" fill="currentColor" font-weight="700">AI-Assisted Queue</text>
+          <text x="560" y="198" text-anchor="middle" fill="currentColor" font-size="10.5">QUEUED_ASSISTED</text>
+
+          <text x="560" y="298" text-anchor="middle" fill="currentColor" font-weight="700">Advisory</text>
+          <text x="560" y="316" text-anchor="middle" fill="currentColor" font-size="10.5">terminal — no button</text>
+
+          <text x="795" y="178" text-anchor="middle" fill="currentColor" font-weight="700">Awaiting Approval</text>
+          <text x="795" y="196" text-anchor="middle" fill="currentColor" font-size="10.5">recommendation posted</text>
+
+          <text x="965" y="118" text-anchor="middle" fill="currentColor" font-weight="700">Resolved</text>
+          <text x="965" y="136" text-anchor="middle" fill="currentColor" font-size="10.5">full log on the</text>
+          <text x="965" y="150" text-anchor="middle" fill="currentColor" font-size="10.5">ticket card</text>
+
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <line x1="170" y1="185" x2="235" y2="185" marker-end="url(#arrow3)"/>
+            <path d="M 405 175 C 430 130 445 105 470 75" marker-end="url(#arrow3)"/>
+            <line x1="405" y1="185" x2="470" y2="185" marker-end="url(#arrow3)"/>
+            <path d="M 405 200 C 430 250 445 280 470 298" marker-end="url(#arrow3)"/>
+            <line x1="650" y1="185" x2="720" y2="185" marker-end="url(#arrow3)" stroke="var(--amber)"/>
+            <path d="M 650 70 C 800 70 850 100 900 118" marker-end="url(#arrow3)" stroke="var(--green)"/>
+            <path d="M 870 175 C 900 155 900 145 900 130" marker-end="url(#arrow3)" stroke="var(--green)"/>
+          </g>
+
+          <g font-size="10.5" fill="currentColor">
+            <text x="200" y="177">creates</text>
+            <text x="415" y="130">🧭 Run Issue Segment Agent</text>
+            <text x="415" y="144">(one click, all pending)</text>
+            <text x="415" y="260">→ advisory: IAM/credential</text>
+            <text x="415" y="273">tickets only</text>
+            <text x="685" y="140" text-anchor="middle" font-size="10.5" fill="var(--amber)">🤖 Start Analysis</text>
+            <text x="685" y="126" text-anchor="middle" font-size="9" fill="var(--amber)">(drafts recommendation)</text>
+            <text x="760" y="90" fill="var(--green)">⚡ Start Fix (no human step)</text>
+            <text x="960" y="175" text-anchor="middle" fill="var(--green)" font-size="10.5">👤 Approve</text>
+            <text x="960" y="188" text-anchor="middle" fill="var(--green)" font-size="9">&amp; Apply Fix</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--green)"></span>Autonomous path — no human click after classification</span>
+      <span><span class="sw" style="background:var(--amber)"></span>AI-Assisted path — one human approval</span>
+      <span><span class="sw" style="background:var(--grey)"></span>Entry point / terminal state</span>
+    </div>
+    <figcaption>This is the literal state machine in <code>ticket_engine.py</code> — every box is a real ticket <code>status</code> value, every arrow a real endpoint (<code>/classify</code>, <code>/start-fix</code>, <code>/start-analysis</code>, <code>/approve</code>). The Issue Segment Agent runs once per ticket and never re-runs; from there a ticket has exactly one path to Resolved, matching the automation level FlowSentinel's playbook assigned it.</figcaption>
+  </figure>
+
+  <footer>
+    Generated from the live FlowSentinel AI dashboard (<code>ctech-flowsentinel-ai</code>) — component names, state values, and endpoint paths match the running code, not a proposed design.
+  </footer>
+</div>
