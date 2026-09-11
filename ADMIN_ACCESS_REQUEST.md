@@ -9,9 +9,9 @@
 
 ## Why this document exists
 
-The framework is up and running locally with real GCP resources (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini) already provisioned and working under my own account. Two access gaps remain, and both need someone with more privilege than I currently have (`roles/editor` on the GCP project) to unblock. This document gives the exact commands — nothing here needs guesswork or a support ticket, just someone with the right role running the commands below.
+The framework is up and running locally with real GCP resources (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini) already provisioned and working under my own account. Three access gaps remain, and each needs someone with more privilege than I currently have to unblock. This document gives the exact commands and steps — nothing here needs guesswork or a support ticket, just someone with the right role/access running through the sections below.
 
-**Update:** you already granted my account `roles/iam.serviceAccountUser` and `roles/logging.configWriter` — thank you, that got the Cloud Run deploy most of the way there. I ran it end to end to find exactly what's still missing, so Section 1 below is now a single, verified role instead of the original six-role guess.
+**Update:** you already granted my account `roles/iam.serviceAccountUser` and `roles/logging.configWriter` — thank you, that got the Cloud Run deploy most of the way there. I ran it end to end to find exactly what's still missing, so Section 1 below is now a single, verified role instead of the original six-role guess. Separately, I've now got GitHub authenticated locally (SSH key via `gh auth login`) and can push to my personal repo fine — which is how Section 2 below surfaced: pushing/reading the org repo under my own account returns `404`, confirming I'm not yet a collaborator on it.
 
 ---
 
@@ -64,7 +64,22 @@ Should include `roles/artifactregistry.writer` in the list.
 
 ---
 
-## 2. GitHub: Approve a fine-grained PAT for the org repo
+## 2. GitHub: Add my account as a collaborator on the org repo
+
+### Who can do this
+Whoever administers repository access for **LatentView-Analytics-Ltd/ctech-flowsentinel-demo** — org **Settings → Collaborators and teams** (or repo **Settings → Collaborators**).
+
+### Why it's needed
+I can authenticate to GitHub fine (SSH key registered, `gh auth login` working), but my account (`kasthurirangansampathkumar`) isn't a collaborator on the org repo — pushing or even reading it via the API returns `404 Not Found`, which is what a private repo returns to an account with no access at all (rather than a `403`, to avoid confirming the repo exists). This blocks me from pushing my local commits to the shared org repo, separate from the PAT issue in Section 3 below.
+
+### Steps
+1. Go to `https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/settings/access`
+2. **Add people** → search `kasthurirangansampathkumar`
+3. Role: **Write** (needed to push commits; the [teammate replication guide](TEAMMATE_REPLICATION_GUIDE.md) asks for the same for anyone else replicating this)
+
+---
+
+## 3. GitHub: Approve a fine-grained PAT for the org repo
 
 ### Who can do this
 Whoever administers the **LatentView-Analytics-Ltd** GitHub organization's Personal Access Token policy (org **Settings → Personal access tokens → Pending requests**), or whoever can grant me permission to generate one scoped to this repo.
@@ -94,6 +109,7 @@ The framework's agents (RCA ticket creation, PR generation/merge, GitHub Project
 ## Checklist for the admin
 
 - [ ] Grant `roles/artifactregistry.writer` to `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` (Section 1) — the one thing left blocking Cloud Run deploy
-- [ ] Approve my fine-grained PAT request for `ctech-flowsentinel-demo` once I've generated it (Section 2)
+- [ ] Add `kasthurirangansampathkumar` as a Write collaborator on `LatentView-Analytics-Ltd/ctech-flowsentinel-demo` (Section 2) — blocks pushing local commits to the shared repo
+- [ ] Approve my fine-grained PAT request for `ctech-flowsentinel-demo` once I've generated it (Section 3)
 
 Nothing else is currently blocking the framework — everything else (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini, GCS) is already working under my existing access.
