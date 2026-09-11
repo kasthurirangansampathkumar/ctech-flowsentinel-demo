@@ -11,34 +11,35 @@
 
 The framework is up and running locally with real GCP resources (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini) already provisioned and working under my own account. Two access gaps remain, and both need someone with more privilege than I currently have (`roles/editor` on the GCP project) to unblock. This document gives the exact commands — nothing here needs guesswork or a support ticket, just someone with the right role running the commands below.
 
+**Update:** you already granted my account `roles/iam.serviceAccountUser` and `roles/logging.configWriter` — thank you, that got the Cloud Run deploy most of the way there. I ran it end to end to find exactly what's still missing, so Section 1 below is now a single, verified role instead of the original six-role guess.
+
 ---
 
-## 1. GCP: Grant Cloud Build/Run roles so the dashboard can deploy
+## 1. GCP: One role left to unblock Cloud Run deploy
 
 ### Who can do this
-**`Pam.master22@latentview.com`** — confirmed via `gcloud projects get-iam-policy` to be the only `roles/owner` on `ctech-flowsentinel-ai`. I only have `roles/editor`, which explicitly excludes `resourcemanager.projects.setIamPolicy` — I can create BigQuery/GCS/Pub/Sub resources, but I cannot grant IAM roles to anyone, including a service account.
+**`Pam.master22@latentview.com`** — confirmed via `gcloud projects get-iam-policy` to be the only `roles/owner` on `ctech-flowsentinel-ai`. I only have `roles/editor` plus the two roles above, none of which include `resourcemanager.projects.setIamPolicy` — I still can't grant IAM roles myself.
 
 ### Why it's needed
-Deploying the Ops Dashboard to Cloud Run (`gcloud run deploy --source=.`) requires a **Cloud Build service account** to build the container image. Normally this defaults to the project's Compute Engine default service account, but:
+With the `iam.serviceAccountUser` grant, I can now deploy using `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` as the build identity (working around this project having no default Compute Engine service account). I ran the actual deploy — **the build itself succeeds**, but pushing the built image to Artifact Registry fails:
 
 ```
-WARNING: The build service account projects/673338764809/serviceAccounts/673338764809-compute@developer.gserviceaccount.com does not exist.
+denied: Permission 'artifactregistry.repositories.uploadArtifacts' denied on resource
+'//artifactregistry.googleapis.com/projects/ctech-flowsentinel-ai/locations/us-central1/repositories/cloud-run-source-deploy'
 ```
 
-This project has no default Compute Engine service account — most likely an org policy disabling automatic default service account creation (a common security hardening setting). The workaround is to point the build at our own existing service account (`flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com`) instead — but that account needs a few more roles first, and granting roles requires `roles/owner` or `roles/resourcemanager.projectIamAdmin`.
+That's the one missing piece — `roles/artifactregistry.writer` on the same service account.
 
-### Commands to run
+### Command to run
 
 ```bash
-PROJECT=ctech-flowsentinel-ai
-SA=flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com
-
-for ROLE in roles/cloudbuild.builds.builder roles/logging.logWriter roles/storage.admin roles/artifactregistry.writer roles/run.admin roles/iam.serviceAccountUser; do
-  gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:${SA}" --role="$ROLE" --condition=None
-done
+gcloud projects add-iam-policy-binding ctech-flowsentinel-ai \
+  --member="serviceAccount:flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer" \
+  --condition=None
 ```
 
-This grants six roles to **one existing service account** — it does not create any new principal or touch anyone's personal access.
+One role, one existing service account — nothing new created, no other access touched.
 
 ### (Recommended, optional) Let me self-serve future IAM changes
 
@@ -59,7 +60,7 @@ gcloud projects get-iam-policy ctech-flowsentinel-ai \
   --filter="bindings.members:flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com" \
   --format="table(bindings.role)"
 ```
-Should list all six roles above.
+Should include `roles/artifactregistry.writer` in the list.
 
 ---
 
@@ -92,7 +93,7 @@ The framework's agents (RCA ticket creation, PR generation/merge, GitHub Project
 
 ## Checklist for the admin
 
-- [ ] Run the 6-role IAM grant in Section 1 (or the optional `projectIamAdmin` grant instead, if preferred)
+- [ ] Grant `roles/artifactregistry.writer` to `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` (Section 1) — the one thing left blocking Cloud Run deploy
 - [ ] Approve my fine-grained PAT request for `ctech-flowsentinel-demo` once I've generated it (Section 2)
 
 Nothing else is currently blocking the framework — everything else (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini, GCS) is already working under my existing access.
