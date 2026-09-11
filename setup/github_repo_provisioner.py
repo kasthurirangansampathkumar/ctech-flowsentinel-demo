@@ -15,6 +15,7 @@ GITHUB_REPO = os.getenv("GITHUB_REPO", "ctech-flowsentinel-demo")
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "ctech-flowsentinel-ai")
 
 import ssl
+import certifi
 
 def create_github_repo():
     if not GITHUB_PAT:
@@ -42,8 +43,8 @@ def create_github_repo():
         method="POST"
     )
 
-    # Disable SSL verification for Homebrew Mac Python
-    ssl_context = ssl._create_unverified_context()
+    # Verified TLS context (avoids MITM exposure of the GitHub token in transit)
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
 
     try:
         with urllib.request.urlopen(req, context=ssl_context) as resp:
@@ -64,10 +65,11 @@ def create_github_repo():
 def push_code_to_github(owner, clone_url):
     print("📌 Pushing local FlowSentinel AI code to GitHub repository...")
     base_dir = "/Users/kasthurirangansampathkumar/Documents/DE Oncall Demo"
-    
-    authenticated_remote = f"https://{GITHUB_PAT}@github.com/{owner}/{GITHUB_REPO}.git"
-    
-    commands = [
+
+    # Clean remote URL with NO token embedded (never persisted to .git/config).
+    clean_remote = f"https://github.com/{owner}/{GITHUB_REPO}.git"
+
+    setup_commands = [
         ["git", "init"],
         ["git", "config", "user.name", "CTech Data Engineers"],
         ["git", "config", "user.email", "de-oncall@ctech.com"],
@@ -75,22 +77,32 @@ def push_code_to_github(owner, clone_url):
         ["git", "commit", "-m", "Initial FlowSentinel AI Framework setup"],
         ["git", "branch", "-M", "main"],
         ["git", "remote", "remove", "origin"],
-        ["git", "remote", "add", "origin", authenticated_remote],
-        ["git", "push", "-u", "origin", "main", "--force"]
+        ["git", "remote", "add", "origin", clean_remote],
     ]
-
-    for cmd in commands:
+    for cmd in setup_commands:
         try:
             subprocess.run(cmd, cwd=base_dir, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             pass
-            
+
+    # Auth is passed as a one-off header on this single push invocation only —
+    # it never touches disk (.git/config) or shell history, unlike a token-in-URL remote.
+    import base64
+    basic_auth = base64.b64encode(f"x-access-token:{GITHUB_PAT}".encode()).decode()
+    push_cmd = [
+        "git", "-c", f"http.extraHeader=AUTHORIZATION: basic {basic_auth}",
+        "push", "-u", "origin", "main",
+    ]
+    result = subprocess.run(push_cmd, cwd=base_dir, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        print(f"⚠️ Push notice: {result.stderr.decode(errors='ignore').strip()[-300:]}")
+
     print(f"🎉 Code successfully pushed to main branch on GitHub: https://github.com/{owner}/{GITHUB_REPO}")
 
 def store_token_in_gcp_secret_manager():
     print(f"🔒 Storing GITHUB_PAT_TOKEN in GCP Secret Manager under project '{GCP_PROJECT_ID}'...")
     gcloud_bin = "/Users/kasthurirangansampathkumar/y/google-cloud-sdk/bin/gcloud"
-    
+
     cmd_create = [
         gcloud_bin, "secrets", "create", "github-pat-token",
         "--replication-policy=automatic",
@@ -98,8 +110,13 @@ def store_token_in_gcp_secret_manager():
     ]
     subprocess.run(cmd_create, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    cmd_add = f"echo -n '{GITHUB_PAT}' | {gcloud_bin} secrets versions add github-pat-token --data-file=- --project={GCP_PROJECT_ID}"
-    subprocess.run(cmd_add, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Pass the secret via stdin (input=) rather than shell string interpolation,
+    # so it never appears in a shell command line or process list.
+    cmd_add = [
+        gcloud_bin, "secrets", "versions", "add", "github-pat-token",
+        "--data-file=-", f"--project={GCP_PROJECT_ID}"
+    ]
+    subprocess.run(cmd_add, input=GITHUB_PAT.encode(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print("✅ Secret 'github-pat-token' updated in GCP Secret Manager!")
 
 if __name__ == "__main__":

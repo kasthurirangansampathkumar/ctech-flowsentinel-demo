@@ -24,7 +24,7 @@
 ### Step 1: Create a New GitHub Project (v2)
 
 1. Navigate to your GitHub Organization or Personal Account:
-   `https://github.com/orgs/YOUR_ORG/projects` OR `https://github.com/kasthurirangan?tab=projects`
+   `https://github.com/orgs/YOUR_ORG/projects` OR `https://github.com/orgs/LatentView-Analytics-Ltd/projects`
 2. Click the green **`New project`** button.
 3. Select **`Board`** layout template and click **`Create`**.
 4. Rename the Project Title:
@@ -95,7 +95,7 @@ Users need to be added in **two distinct locations** depending on whether they r
 #### 1. Repository Access (For Engineers & Reviewers)
 - **Location**: GitHub Repository Settings ➔ `Collaborators` (or `Teams and people` for Orgs).
 - **Steps**:
-  1. Go to `https://github.com/kasthurirangan/ctech-flowsentinel-demo/settings/access`
+  1. Go to `https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/settings/access`
   2. Click **`Add people`** and search by GitHub username or corporate email.
   3. Select Role:
      - `Write` (For On-Call Data Engineers to push branches, review PRs, and manage issues).

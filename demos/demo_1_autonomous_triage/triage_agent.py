@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import ssl
+import certifi
 import urllib.request
 import urllib.parse
 try:
@@ -19,7 +20,7 @@ PROJECT_ID = os.getenv("GCP_PROJECT_ID", "ctech-flowsentinel-demo-dev")
 SUBSCRIPTION_NAME = "de-incidents-sub"
 GITHUB_PAT = os.getenv("GITHUB_PAT_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "ctech-flowsentinel-demo")
-GITHUB_OWNER = os.getenv("GITHUB_OWNER", "kasthurirangan")
+GITHUB_OWNER = os.getenv("GITHUB_OWNER", "LatentView-Analytics-Ltd")
 
 def generate_gemini_rca(log_payload):
     """
@@ -66,7 +67,7 @@ def create_github_issue(rca_markdown, log_payload):
         print("="*60)
         print(rca_markdown)
         print("="*60)
-        return "https://github.com/kasthurirangan/ctech-flowsentinel-demo/issues/42 (Simulated)"
+        return "https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/issues/42 (Simulated)"
 
     print("🐙 [GitHub Issues] Creating enriched incident ticket...")
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/issues"
@@ -89,7 +90,7 @@ def create_github_issue(rca_markdown, log_payload):
         method="POST"
     )
 
-    ssl_context = ssl._create_unverified_context()
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
     try:
         with urllib.request.urlopen(req, context=ssl_context) as resp:
             data = json.loads(resp.read().decode())
@@ -98,7 +99,7 @@ def create_github_issue(rca_markdown, log_payload):
             return issue_url
     except Exception as e:
         print(f"❌ Failed to post GitHub Issue: {e}")
-        return "https://github.com/kasthurirangan/ctech-flowsentinel-demo/issues/42 (Fallback)"
+        return "https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/issues/42 (Fallback)"
 
 def run_triage_agent():
     print("🚀 [Demo 1] FlowSentinel Autonomous Triage Agent Started...")

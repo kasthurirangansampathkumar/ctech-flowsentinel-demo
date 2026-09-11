@@ -10,7 +10,7 @@ import urllib.request
 
 GITHUB_PAT = os.getenv("GITHUB_PAT_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "ctech-flowsentinel-demo")
-GITHUB_OWNER = os.getenv("GITHUB_OWNER", "kasthurirangan")
+GITHUB_OWNER = os.getenv("GITHUB_OWNER", "LatentView-Analytics-Ltd")
 
 ORIGINAL_BROKEN_SQL = """-- Staging orders transformation model
 SELECT
@@ -36,6 +36,7 @@ FROM `ctech-flowsentinel-demo-dev.raw_staging.orders`
 """
 
 import ssl
+import certifi
 
 def generate_code_patch():
     print("🤖 [Code Repair Agent] Generating SQL schema adapter patch using Gemini 2.0...")
@@ -68,7 +69,7 @@ Click **`[Approve & Auto-Deploy]`** on the FlowSentinel Ops Dashboard to merge t
     if not GITHUB_PAT:
         print("⚠️ GITHUB_PAT_TOKEN not set. Displaying simulated PR response:")
         print(f"🎉 Simulated PR #142 Created: https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/pull/142")
-        return "https://github.com/kasthurirangan/ctech-flowsentinel-demo/pull/142 (Simulated)"
+        return "https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/pull/142 (Simulated)"
 
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls"
     payload = {
@@ -89,7 +90,7 @@ Click **`[Approve & Auto-Deploy]`** on the FlowSentinel Ops Dashboard to merge t
         method="POST"
     )
 
-    ssl_context = ssl._create_unverified_context()
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
     try:
         with urllib.request.urlopen(req, context=ssl_context) as resp:
             data = json.loads(resp.read().decode())
@@ -98,7 +99,7 @@ Click **`[Approve & Auto-Deploy]`** on the FlowSentinel Ops Dashboard to merge t
             return pr_url
     except Exception as e:
         print(f"❌ Failed to post PR: {e}")
-        return "https://github.com/kasthurirangan/ctech-flowsentinel-demo/pull/142 (Fallback)"
+        return "https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/pull/142 (Fallback)"
 
 def run_repair_agent():
     print("🚀 [Demo 2] Starting Code Repair Agent...")

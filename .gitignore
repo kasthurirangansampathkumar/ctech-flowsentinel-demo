@@ -1,0 +1,30 @@
+# Secrets & credentials — never commit
+*.rtf
+*credentials*
+*secret*
+*-sa-key.json
+*-key.json
+*.pem
+*.p12
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dashboard/.venv/
+
+# Node / dashboard frontend
+dashboard/frontend/node_modules/
+dashboard/frontend/dist/
+
+# OS
+.DS_Store
+
+# Generated demo artifacts
+orders_valid.csv
+orders_corrupt_schema.csv
+customer_profiles_temp.json

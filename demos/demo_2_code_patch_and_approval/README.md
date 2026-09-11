@@ -28,7 +28,7 @@ Demonstrate how FlowSentinel AI takes the Root Cause Analysis (RCA) from Demo 1,
 export GCP_PROJECT_ID="ctech-flowsentinel-demo-dev"
 export GITHUB_PAT_TOKEN="ghp_your_personal_access_token"
 export GITHUB_REPO="ctech-flowsentinel-demo"
-export GITHUB_OWNER="kasthurirangan"
+export GITHUB_OWNER="LatentView-Analytics-Ltd"
 ```
 
 ### 2. Run the Full Demo

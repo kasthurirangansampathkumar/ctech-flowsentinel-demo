@@ -11,10 +11,11 @@ import urllib.request
 
 GITHUB_PAT = os.getenv("GITHUB_PAT_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "ctech-flowsentinel-demo")
-GITHUB_OWNER = os.getenv("GITHUB_OWNER", "kasthurirangan")
+GITHUB_OWNER = os.getenv("GITHUB_OWNER", "LatentView-Analytics-Ltd")
 PR_NUMBER = os.getenv("PR_NUMBER", "142")
 
 import ssl
+import certifi
 
 def simulate_dashboard_approval():
     print("🎛️ [FlowSentinel HITL Dashboard] Receiving 1-Click Human Approval...")
@@ -47,7 +48,7 @@ def merge_github_pr():
         method="PUT"
     )
 
-    ssl_context = ssl._create_unverified_context()
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
     try:
         with urllib.request.urlopen(req, context=ssl_context) as resp:
             data = json.loads(resp.read().decode())

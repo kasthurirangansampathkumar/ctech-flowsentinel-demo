@@ -43,7 +43,7 @@ Follow this sequential checklist once your system administrator grants access to
    
    # GitHub Integration (Optional for live GitHub PR/Issue creation)
    export GITHUB_PAT_TOKEN="ghp_your_generated_personal_access_token"
-   export GITHUB_OWNER="kasthurirangan"
+   export GITHUB_OWNER="LatentView-Analytics-Ltd"
    export GITHUB_REPO="ctech-flowsentinel-demo"
    ```
 
