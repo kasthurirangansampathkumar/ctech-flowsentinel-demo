@@ -14,6 +14,7 @@ function onModeToggle() {
   const checked = document.getElementById("live-mode-toggle").checked;
   localStorage.setItem("flowsentinel_live_mode", checked ? "true" : "false");
   applyModeUI();
+  refreshAll(); // switch Summary between demo sample data and real Composer/BigQuery immediately
 }
 
 function applyModeUI() {
@@ -91,6 +92,12 @@ function initTabs() {
 async function loadScorecard() {
   const el = document.getElementById("scorecard");
   const data = await j("/api/summary/pipelines");
+  const tbody = document.querySelector("#pipeline-runs-table tbody");
+  if (data.error) {
+    el.innerHTML = `<div class="empty">⚠️ ${data.error}</div>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="empty">⚠️ ${data.error}</td></tr>`;
+    return;
+  }
   const sc = data.scorecard;
   el.innerHTML = `
     <div class="scorecard-tile"><div class="metric">${sc.total_pipelines}</div><div class="metric-label">Pipelines Monitored</div></div>
@@ -98,27 +105,30 @@ async function loadScorecard() {
     <div class="scorecard-tile ${sc.breaching ? "warn" : ""}"><div class="metric">${sc.breaching}</div><div class="metric-label">Breaching SLA</div></div>
   `;
 
-  const tbody = document.querySelector("#pipeline-runs-table tbody");
-  tbody.innerHTML = data.pipelines.map(p => `
+  tbody.innerHTML = data.pipelines.length ? data.pipelines.map(p => `
     <tr>
       <td><b>${p.name}</b></td>
       <td><div class="run-dots">${p.runs.map(r => `<div class="run-dot ${r}" title="${r}"></div>`).join("")}</div></td>
       <td>${badge(p.in_sla ? "In SLA" : "Breach", p.in_sla ? "green" : "red")}</td>
     </tr>
-  `).join("");
+  `).join("") : `<tr><td colspan="3" class="empty">No pipelines found.</td></tr>`;
 }
 
 async function loadTableFreshness() {
   const data = await j("/api/summary/tables");
   const tbody = document.querySelector("#table-freshness-table tbody");
-  tbody.innerHTML = data.tables.map(t => `
+  if (data.error) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">⚠️ ${data.error}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.tables.length ? data.tables.map(t => `
     <tr>
       <td><span class="mono" style="font-family:ui-monospace,monospace">${t.table}</span></td>
       <td>${t.most_recent_date}</td>
       <td>${t.days_since} day${t.days_since === 1 ? "" : "s"} ago</td>
       <td>${badge(t.in_sla ? "In SLA" : "Non-SLA", t.in_sla ? "green" : "red")}</td>
     </tr>
-  `).join("");
+  `).join("") : `<tr><td colspan="4" class="empty">No tables found.</td></tr>`;
 }
 
 /* ---------------- Ops Overview (unchanged behavior) ---------------- */

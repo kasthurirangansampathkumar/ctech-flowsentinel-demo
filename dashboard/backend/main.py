@@ -478,13 +478,13 @@ def seed_demo(live: bool = Depends(is_live_mode)):
 
 
 @app.get("/api/summary/pipelines")
-def summary_pipelines():
-    return summary_data.get_pipeline_runs()
+def summary_pipelines(live: bool = Depends(is_live_mode)):
+    return summary_data.get_pipeline_runs(live=live)
 
 
 @app.get("/api/summary/tables")
-def summary_tables():
-    return summary_data.get_table_freshness()
+def summary_tables(live: bool = Depends(is_live_mode)):
+    return summary_data.get_table_freshness(live=live)
 
 
 @app.get("/api/agents")

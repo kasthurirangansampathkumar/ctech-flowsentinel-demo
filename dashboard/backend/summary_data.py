@@ -4,23 +4,31 @@ FlowSentinel AI - Summary view data
 ====================================
 Pipeline run-health and table-freshness data for the Summary tab.
 
-Both try a real GCP call first (Composer/BigQuery, via ADC) and fall back to
-a curated, clearly-realistic sample when that access isn't available yet --
-same pattern as the rest of the framework's demo scripts. The pipeline and
-table names match the ones used across the ticket demo so the whole
-dashboard tells one consistent story.
+This is mode-aware, same as the ticket engine:
+  - Demo Mode (live=False)  -> the curated sample below, with a couple of
+    tables/pipelines deliberately shown as breaching SLA. This is the fixed
+    "failure story" used for a walkthrough -- it never touches real GCP.
+  - Production Mode (live=True) -> queries the real Cloud Composer DAG bucket
+    and every real BigQuery table across our four datasets. No sample data,
+    no silent fallback -- if a real call fails, the error is surfaced rather
+    than quietly substituted with fiction.
 """
 import os
 import random
 from datetime import datetime, timedelta, timezone
 
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "ctech-flowsentinel-ai")
+REGION = os.getenv("GCP_REGION", "us-central1")
+COMPOSER_ENV = os.getenv("COMPOSER_ENVIRONMENT", "ctech-flowsentinel-demo-dev")
 
 # SLA window for "most recent data" freshness -- a table is compliant if its
 # newest partition/row landed within this many days of now.
 TABLE_SLA_DAYS = 2
 
-PIPELINES = [
+# Datasets Production Mode scans in full -- every table in each, not a fixed list.
+DATASETS = ["raw_staging", "dw_analytics", "de_ops_metadata", "backfill_sandbox"]
+
+DEMO_PIPELINES = [
     "sales_transformation_pipeline",
     "vendor_crm_sync",
     "vendor_ecom_ingest",
@@ -31,10 +39,10 @@ PIPELINES = [
     "inventory_sync_pipeline",
 ]
 
-# (table, days_since_last_update) -- the fallback sample. Deliberately mixes
+# (table, days_since_last_update) -- the Demo Mode sample. Deliberately mixes
 # a few stale tables in with fresh ones so the SLA breach sort has something
-# to show on a first run with no cloud access yet.
-TABLE_SAMPLE = [
+# to show without needing real cloud access.
+DEMO_TABLES = [
     ("raw_staging.orders", 0),
     ("raw_staging.customer_profiles", 1),
     ("dw_analytics.stg_orders", 0),
@@ -55,9 +63,9 @@ def _seeded_run_history(name: str) -> list:
     return [rng.choice(weights) for _ in range(5)]
 
 
-def get_pipeline_runs() -> dict:
+def _demo_pipeline_runs() -> dict:
     pipelines = []
-    for name in PIPELINES:
+    for name in DEMO_PIPELINES:
         runs = _seeded_run_history(name)
         in_sla = runs[-1] == "success"
         pipelines.append({"name": name, "runs": runs, "in_sla": in_sla})
@@ -65,44 +73,116 @@ def get_pipeline_runs() -> dict:
     total = len(pipelines)
     in_sla_count = sum(1 for p in pipelines if p["in_sla"])
     return {
+        "source": "demo",
         "scorecard": {"total_pipelines": total, "in_sla": in_sla_count, "breaching": total - in_sla_count},
         "pipelines": pipelines,
     }
 
 
-def _table_freshness_from_bigquery() -> list:
+def _production_pipeline_runs() -> dict:
+    """Real DAGs from the Composer environment's GCS dags/ folder, with a real
+    5-day failure history pulled from Cloud Logging -- one real day, one real
+    verdict, not a seeded fake sparkline."""
+    from googleapiclient.discovery import build
+    from google.cloud import logging as cloud_logging
+
+    service = build("composer", "v1", cache_discovery=False)
+    env_name = f"projects/{PROJECT_ID}/locations/{REGION}/environments/{COMPOSER_ENV}"
+    env = service.projects().locations().environments().get(name=env_name).execute()
+    dag_gcs_prefix = env["config"]["dagGcsPrefix"]  # e.g. gs://bucket/dags
+
+    from google.cloud import storage
+    bucket_name = dag_gcs_prefix.replace("gs://", "").split("/")[0]
+    storage_client = storage.Client(project=PROJECT_ID)
+    blobs = storage_client.list_blobs(bucket_name, prefix="dags/")
+    dag_ids = sorted({
+        b.name.split("/")[-1][:-3] for b in blobs
+        if b.name.endswith(".py") and not b.name.endswith("/__init__.py")
+    })
+    if not dag_ids:
+        raise RuntimeError(f"No DAG files found under {dag_gcs_prefix} -- nothing deployed to Composer yet.")
+
+    log_client = cloud_logging.Client(project=PROJECT_ID)
+    now = datetime.now(timezone.utc)
+    pipelines = []
+    for dag_id in dag_ids:
+        runs = []
+        for days_ago in range(4, -1, -1):
+            day_start = (now - timedelta(days=days_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            filter_str = (
+                f'resource.type="cloud_composer_environment" severity>=ERROR '
+                f'jsonPayload.dag_id="{dag_id}" '
+                f'timestamp>="{day_start.isoformat()}" timestamp<"{day_end.isoformat()}"'
+            )
+            entries = list(log_client.list_entries(filter_=filter_str, page_size=1))
+            runs.append("failed" if entries else "success")
+        in_sla = runs[-1] == "success"
+        pipelines.append({"name": dag_id, "runs": runs, "in_sla": in_sla})
+
+    total = len(pipelines)
+    in_sla_count = sum(1 for p in pipelines if p["in_sla"])
+    return {
+        "source": "composer",
+        "scorecard": {"total_pipelines": total, "in_sla": in_sla_count, "breaching": total - in_sla_count},
+        "pipelines": pipelines,
+    }
+
+
+def get_pipeline_runs(live: bool = False) -> dict:
+    if not live:
+        return _demo_pipeline_runs()
+    try:
+        return _production_pipeline_runs()
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(exc), "source": "composer", "pipelines": [],
+                "scorecard": {"total_pipelines": 0, "in_sla": 0, "breaching": 0}}
+
+
+def _demo_table_freshness() -> dict:
+    now = datetime.now(timezone.utc)
+    rows = [(name, days, (now - timedelta(days=days)).date().isoformat()) for name, days in DEMO_TABLES]
+    tables = [
+        {"table": name, "most_recent_date": date_str, "days_since": days, "in_sla": days <= TABLE_SLA_DAYS}
+        for name, days, date_str in rows
+    ]
+    tables.sort(key=lambda t: (t["in_sla"], -t["days_since"]))
+    return {"source": "demo", "sla_days": TABLE_SLA_DAYS, "tables": tables}
+
+
+def _production_table_freshness() -> dict:
+    """Every table in every dataset we manage -- not a fixed list."""
     from google.cloud import bigquery
 
     client = bigquery.Client(project=PROJECT_ID)
     now = datetime.now(timezone.utc)
     rows = []
-    for full_name, _ in TABLE_SAMPLE:
-        dataset, table = full_name.split(".")
+    for dataset in DATASETS:
         try:
-            meta = client.get_table(f"{PROJECT_ID}.{dataset}.{table}")
-            modified = meta.modified or now
-            days_since = (now - modified).days
-            rows.append((full_name, days_since, modified.date().isoformat()))
+            tables = list(client.list_tables(f"{PROJECT_ID}.{dataset}"))
         except Exception:  # noqa: BLE001
             continue
-    if len(rows) < len(TABLE_SAMPLE) // 2:
-        raise RuntimeError("too few real tables found, falling back to sample")
-    return rows
+        for t in tables:
+            meta = client.get_table(t.reference)
+            modified = meta.modified or now
+            days_since = (now - modified).days
+            rows.append((f"{dataset}.{t.table_id}", days_since, modified.date().isoformat()))
 
-
-def get_table_freshness() -> dict:
-    now = datetime.now(timezone.utc)
-    try:
-        rows = _table_freshness_from_bigquery()
-        source = "bigquery"
-    except Exception:  # noqa: BLE001
-        rows = [(name, days, (now - timedelta(days=days)).date().isoformat()) for name, days in TABLE_SAMPLE]
-        source = "sample"
+    if not rows:
+        raise RuntimeError(f"No tables found across {', '.join(DATASETS)} -- nothing loaded yet.")
 
     tables = [
         {"table": name, "most_recent_date": date_str, "days_since": days, "in_sla": days <= TABLE_SLA_DAYS}
         for name, days, date_str in rows
     ]
-    # Non-SLA (breaching) tables first, then oldest-first within each group.
     tables.sort(key=lambda t: (t["in_sla"], -t["days_since"]))
-    return {"source": source, "sla_days": TABLE_SLA_DAYS, "tables": tables}
+    return {"source": "bigquery", "sla_days": TABLE_SLA_DAYS, "tables": tables}
+
+
+def get_table_freshness(live: bool = False) -> dict:
+    if not live:
+        return _demo_table_freshness()
+    try:
+        return _production_table_freshness()
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(exc), "source": "bigquery", "sla_days": TABLE_SLA_DAYS, "tables": []}
