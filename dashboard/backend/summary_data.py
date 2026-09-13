@@ -104,19 +104,30 @@ def _production_pipeline_runs() -> dict:
 
     log_client = cloud_logging.Client(project=PROJECT_ID)
     now = datetime.now(timezone.utc)
+    window_start = (now - timedelta(days=4)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # One Cloud Logging call for the whole 5-day window across every DAG,
+    # instead of 8 DAGs x 5 days of separate calls -- the latter blows through
+    # the API's 60-reads/minute quota within a couple of dashboard refreshes.
+    dag_id_filter = " OR ".join(f'jsonPayload.dag_id="{d}"' for d in dag_ids)
+    filter_str = (
+        f'resource.type="cloud_composer_environment" severity>=ERROR '
+        f'({dag_id_filter}) timestamp>="{window_start.isoformat()}"'
+    )
+    failed_days = {}  # dag_id -> set of ISO date strings that had an error
+    for entry in log_client.list_entries(filter_=filter_str, page_size=1000):
+        payload = entry.payload if isinstance(entry.payload, dict) else {}
+        dag_id = payload.get("dag_id")
+        if dag_id in dag_ids and entry.timestamp:
+            failed_days.setdefault(dag_id, set()).add(entry.timestamp.date().isoformat())
+
     pipelines = []
     for dag_id in dag_ids:
-        runs = []
-        for days_ago in range(4, -1, -1):
-            day_start = (now - timedelta(days=days_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = day_start + timedelta(days=1)
-            filter_str = (
-                f'resource.type="cloud_composer_environment" severity>=ERROR '
-                f'jsonPayload.dag_id="{dag_id}" '
-                f'timestamp>="{day_start.isoformat()}" timestamp<"{day_end.isoformat()}"'
-            )
-            entries = list(log_client.list_entries(filter_=filter_str, page_size=1))
-            runs.append("failed" if entries else "success")
+        days_with_errors = failed_days.get(dag_id, set())
+        runs = [
+            "failed" if (now - timedelta(days=days_ago)).date().isoformat() in days_with_errors else "success"
+            for days_ago in range(4, -1, -1)
+        ]
         in_sla = runs[-1] == "success"
         pipelines.append({"name": dag_id, "runs": runs, "in_sla": in_sla})
 
