@@ -393,8 +393,12 @@ def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict,
     tickets = tickets or []
     unclassified = [t for t in tickets if t.get("status") == "new"]
     active = [t for t in tickets if t.get("status") not in ("new", "resolved")]
+    # Advisory tickets are terminal by design (never auto-remediated) -- surface them,
+    # but don't lead with one or say it's "in progress" when a working ticket exists.
+    in_progress = [t for t in active if t.get("status") != "advisory"]
+    advisory_open = [t for t in active if t.get("status") == "advisory"]
     # Most recent active ticket per category label, most-recent-first -- what's actually on the board.
-    active_by_recency = sorted(active, key=lambda t: t.get("created_at", 0), reverse=True)
+    active_by_recency = sorted(in_progress, key=lambda t: t.get("created_at", 0), reverse=True)
     ticket_line_items = [
         f"'{t.get('category_label') or t.get('title')}' on {t.get('inputs', {}).get('pipeline') or 'unspecified pipeline'} "
         f"({t.get('status')})" for t in active_by_recency[:5]
@@ -408,7 +412,9 @@ def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict,
         + f". Open incidents: {ticket_stats.get('open_incidents', 0)}. "
         f"Awaiting human approval: {ticket_stats.get('awaiting_approval', 0)}. "
         f"Unclassified tickets on the board: {len(unclassified)}. "
-        + (f"Active tickets right now: {'; '.join(ticket_line_items)}." if ticket_line_items else "No active tickets on the board.")
+        + (f"Active tickets right now: {'; '.join(ticket_line_items)}. " if ticket_line_items else "No autonomous/assisted tickets in flight. ")
+        + (f"Advisory-only tickets awaiting manual investigation (never auto-remediated): {len(advisory_open)}."
+           if advisory_open else "No advisory tickets open.")
     )
 
     prompt = (
@@ -441,6 +447,14 @@ def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict,
         fallback = (
             f"{len(unclassified)} new ticket(s) just landed on the board, not yet classified. "
             "Recommended action: run the Issue Segment Agent to route them to the right queue."
+        )
+    elif advisory_open:
+        t = advisory_open[0]
+        fallback = (
+            f"'{t.get('category_label') or t.get('title')}' on {t.get('inputs', {}).get('pipeline') or 'unspecified pipeline'} "
+            "is open as advisory-only -- this category is never auto-remediated. "
+            f"Recommended action: a human needs to investigate it directly on the Ticket Board"
+            + (f" ({len(advisory_open)} advisory tickets open)." if len(advisory_open) > 1 else ".")
         )
     elif not breaching_pipelines and not non_sla_tables:
         fallback = (
