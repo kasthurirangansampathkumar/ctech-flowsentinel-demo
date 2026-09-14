@@ -1,0 +1,53 @@
+name: Deploy Composer DAGs
+
+# Syncs composer_dags/ to the Cloud Composer environment's GCS dags/ folder
+# whenever a change to that folder lands on main. Authenticates via Workload
+# Identity Federation -- no long-lived service account key stored in GitHub.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "composer_dags/**"
+  workflow_dispatch: {}  # manual "Run workflow" button, for re-syncing without a new commit
+
+permissions:
+  id-token: write   # required to mint the OIDC token WIF exchanges for a GCP credential
+  contents: read
+
+env:
+  GCS_DAG_BUCKET: us-central1-ctech-flowsenti-34a08e5b-bucket
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Syntax-only check -- catches a typo/broken file before it ever reaches
+      # Composer, where a bad DAG file can otherwise stop the whole
+      # environment's DAG parser from loading anything. A full Airflow-import
+      # check would be a stronger gate but costs a slow `pip install
+      # apache-airflow` on every push; syntax validation is the cheap 90% win.
+      - name: Validate DAG syntax
+        run: python -m py_compile composer_dags/*.py
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Plain rsync (no -d/delete flag): only adds/updates files this repo
+      # tracks. Deliberately never deletes anything in the bucket, since other
+      # DAGs may exist there that this repo doesn't own.
+      - name: Sync DAGs to Composer
+        run: gsutil -m rsync -r composer_dags "gs://${GCS_DAG_BUCKET}/dags"
