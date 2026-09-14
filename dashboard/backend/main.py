@@ -12,6 +12,7 @@ logged, never sent to the frontend.
 """
 import json
 import os
+import random
 import subprocess
 import sys
 from functools import lru_cache
@@ -49,6 +50,18 @@ app = FastAPI(title="FlowSentinel AI Ops Dashboard")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+
+
+@app.middleware("http")
+async def no_cache_frontend(request, call_next):
+    """The dashboard shell (index.html/app.js) has no build hash in its
+    filename, so browsers can silently keep serving a pre-deploy copy with no
+    visible sign anything's wrong -- exactly what happened here. Every
+    non-API response gets a hard no-store instead."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+    return response
 
 
 def is_live_mode(x_demo_mode: str = Header(default="visual")) -> bool:
@@ -426,24 +439,20 @@ def reset_demo():
     return {"ok": True}
 
 
-# A curated spread across automation levels -- 3 autonomous, 2 assisted, 1
-# advisory -- so one click gives the Ticket Board something worth walking
-# through instead of a single ticket.
-DEMO_SEED_SET = [
-    "schema_drift", "delayed_missing_data", "resource_exhaustion",
-    "orchestration_stall", "connection_pool", "credentials_iam",
-]
+SEED_SAMPLE_SIZE = 6
 
 
 @app.post("/api/demo/seed")
 def seed_demo(live: bool = Depends(is_live_mode)):
-    """The 'Begin Demo' button: injects a realistic set of failures at once,
+    """The 'Begin Demo' button: injects a random spread of failures at once,
     all left unclassified -- the Ticket Board's Issue Segment Agent and the
-    per-ticket fix/analysis buttons are the next steps."""
+    per-ticket fix/analysis buttons are the next steps. Randomized per click
+    (category mix and pipeline names both) so back-to-back demo runs don't
+    look identical."""
     created = []
-    for key in DEMO_SEED_SET:
-        failure = ticket_engine.CATALOG_BY_KEY[key]
-        pipeline = summary_data.PIPELINES[hash(key) % len(summary_data.PIPELINES)]
+    chosen = random.sample(ticket_engine.FAILURE_CATALOG, min(SEED_SAMPLE_SIZE, len(ticket_engine.FAILURE_CATALOG)))
+    for failure in chosen:
+        pipeline = random.choice(summary_data.DEMO_PIPELINES)
         ticket = ticket_engine.STORE.create(
             title=f"[{failure.label}] {pipeline} incident",
             description=failure.placeholder,
