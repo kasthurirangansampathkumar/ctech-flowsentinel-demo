@@ -170,9 +170,12 @@ async function loadIncidents() {
   const el = document.getElementById("incidents");
   const data = await j("/api/incidents");
   if (data.error) { el.innerHTML = `<div class="empty">⚠️ ${data.error}</div>`; return; }
-  if (!data.issues.length) { el.innerHTML = `<div class="empty">No incidents raised yet. Run Demo 1 to generate one.</div>`; return; }
+  if (!data.issues.length) {
+    el.innerHTML = `<div class="empty">No incidents yet. ${isLiveMode() ? "Waiting on real GitHub Issues." : "Inject a failure and classify it on the Ticket Board."}</div>`;
+    return;
+  }
   el.innerHTML = data.issues.map(i => `
-    <div class="row"><a href="${i.url}" target="_blank">#${i.number} ${i.title}</a>${badge(i.state, i.state === "open" ? "red" : "green")}</div>
+    <div class="row">${i.url ? `<a href="${i.url}" target="_blank">#${i.number} ${i.title}</a>` : `<span>#${i.number} ${i.title}</span>`}${badge(i.state, i.state === "open" ? "red" : "green")}</div>
   `).join("");
 }
 
@@ -180,10 +183,13 @@ async function loadPRs() {
   const el = document.getElementById("prs");
   const data = await j("/api/pull-requests");
   if (data.error) { el.innerHTML = `<div class="empty">⚠️ ${data.error}</div>`; return; }
-  if (!data.pull_requests.length) { el.innerHTML = `<div class="empty">No PRs awaiting approval. Run Demo 2 to generate one.</div>`; return; }
+  if (!data.pull_requests.length) {
+    el.innerHTML = `<div class="empty">No PRs awaiting approval. ${isLiveMode() ? "Waiting on a real open GitHub PR." : "Nothing sitting in Awaiting Approval on the Ticket Board."}</div>`;
+    return;
+  }
   el.innerHTML = data.pull_requests.map(p => `
-    <div class="row"><a href="${p.url}" target="_blank">#${p.number} ${p.title}</a>
-      <button class="btn" onclick="approvePr(${p.number}, this)">Approve &amp; Auto-Deploy</button></div>
+    <div class="row">${p.url ? `<a href="${p.url}" target="_blank">#${p.number} ${p.title}</a>` : `<span>#${p.number} ${p.title}</span>`}
+      <button class="btn" onclick="${p.kind === "ticket" ? `approveTicketFromSummary('${p.number}', this)` : `approvePr(${p.number}, this)`}">Approve &amp; Auto-Deploy</button></div>
   `).join("");
 }
 
@@ -196,22 +202,21 @@ async function approvePr(number, btn) {
   } catch { btn.textContent = "❌ Failed"; }
 }
 
-async function loadWorkflows() {
-  const el = document.getElementById("workflows");
-  const data = await j("/api/workflows");
-  if (data.error) { el.innerHTML = `<div class="empty">⚠️ ${data.error}</div>`; return; }
-  el.innerHTML = data.workflows.map(w => `
-    <div class="row"><span>${w.label}<br><span style="color:var(--faint); font-size:12px">${w.description}</span></span>
-      <button class="btn" onclick="runWorkflow('${w.key}', this)">Run</button></div>
-  `).join("");
+async function approveTicketFromSummary(id, btn) {
+  btn.disabled = true; btn.textContent = "Merging…";
+  await adminPost(`/api/tickets/${id}/approve`);
+  btn.textContent = "✅ Merged";
+  refreshTickets();
+  setTimeout(loadPRs, 1200);
 }
 
-async function runWorkflow(key, btn) {
-  btn.disabled = true; btn.textContent = "Running…";
-  const res = await adminPost(`/api/workflows/${key}/run`);
-  btn.textContent = res.ok ? "✅ Done" : (res.detail ? `⚠️ ${res.detail}` : "⚠️ See log");
-  btn.disabled = false;
-  setTimeout(() => { btn.textContent = "Run"; }, 3000);
+async function loadReadout() {
+  const el = document.getElementById("readout-text");
+  const tag = document.getElementById("readout-tag");
+  const data = await j("/api/summary/readout");
+  el.textContent = data.text || "Unable to generate a read-out right now.";
+  tag.textContent = data.engine === "gemini" ? "🧠 Gemini" : "📋 Template";
+  tag.className = `readout-tag ${data.engine === "gemini" ? "gemini" : "template"}`;
 }
 
 /* ---------------- Demo Console ---------------- */
@@ -352,9 +357,9 @@ async function refreshTickets() {
 }
 
 function refreshAll() {
-  loadHealth(); loadScorecard(); loadTableFreshness();
+  loadHealth(); loadReadout(); loadScorecard(); loadTableFreshness();
   loadPipelines(); loadFeedStatus(); loadIncidents();
-  loadPRs(); loadWorkflows(); refreshTickets();
+  loadPRs(); refreshTickets();
 }
 
 initTabs();

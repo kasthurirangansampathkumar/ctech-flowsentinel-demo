@@ -368,6 +368,60 @@ def backfill_apply_agent(ticket, live: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Ops Read-Out Agent -- the Summary tab's headline. Not tied to one ticket;
+# it reads the same pipeline/table/ticket numbers already on screen and
+# writes the one paragraph an on-call engineer would want first: what's the
+# state, what's the single biggest problem, what to do about it.
+# ---------------------------------------------------------------------------
+
+def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict, live: bool = True) -> dict:
+    pipelines = pipeline_data.get("pipelines", [])
+    tables = table_data.get("tables", [])
+    scorecard = pipeline_data.get("scorecard", {})
+
+    breaching_pipelines = [p["name"] for p in pipelines if not p.get("in_sla")]
+    non_sla_tables = [t for t in tables if not t.get("in_sla")]
+    worst_table = non_sla_tables[0] if non_sla_tables else None  # tables list is sorted breach-first, oldest-first
+
+    facts = (
+        f"Pipelines: {scorecard.get('in_sla', 0)}/{scorecard.get('total_pipelines', 0)} in SLA. "
+        f"Breaching pipelines: {', '.join(breaching_pipelines) if breaching_pipelines else 'none'}. "
+        f"Non-SLA tables: {len(non_sla_tables)} of {len(tables)}"
+        + (f", worst is '{worst_table['table']}' ({worst_table['days_since']} days stale)" if worst_table else "")
+        + f". Open incidents: {ticket_stats.get('open_incidents', 0)}. "
+        f"Awaiting human approval: {ticket_stats.get('awaiting_approval', 0)}."
+    )
+
+    prompt = (
+        "You are the Ops Read-Out Agent for FlowSentinel AI, an autonomous data-engineering on-call framework. "
+        "Given these real, current numbers from the Summary dashboard:\n\n"
+        f"{facts}\n\n"
+        "Write a 2-3 sentence executive read-out for the on-call engineer covering: (1) overall status, "
+        "(2) the single most significant issue right now -- name it specifically, don't just say 'some pipelines' "
+        "-- and (3) the one recommended next action. Plain text, no markdown, no preamble like 'Here is a summary'. "
+        "If everything is healthy, say so plainly and don't invent a problem."
+    )
+    ai_text = call_gemini(prompt, live=live)
+    if ai_text:
+        return {"text": ai_text.strip(), "engine": "gemini"}
+
+    if not breaching_pipelines and not non_sla_tables:
+        fallback = (
+            f"All {scorecard.get('total_pipelines', 0)} pipelines are in SLA and every tracked table is fresh. "
+            f"{ticket_stats.get('awaiting_approval', 0)} ticket(s) awaiting approval. No action needed right now."
+        )
+    else:
+        worst_desc = f"table '{worst_table['table']}' hasn't refreshed in {worst_table['days_since']} days" if worst_table else "a breaching pipeline"
+        fallback = (
+            f"{scorecard.get('in_sla', 0)} of {scorecard.get('total_pipelines', 0)} pipelines are in SLA. "
+            f"Biggest concern: {worst_desc}. "
+            f"Recommended action: review it on the Ticket Board"
+            + (f" and approve the {ticket_stats.get('awaiting_approval')} pending fix(es)." if ticket_stats.get("awaiting_approval") else ".")
+        )
+    return {"text": fallback, "engine": "template"}
+
+
+# ---------------------------------------------------------------------------
 # The Issue Segment Agent -- classification, the front door for every ticket.
 # ---------------------------------------------------------------------------
 
@@ -633,6 +687,20 @@ AGENT_SPECS = [
         decision_task="Summarize the real plan and recommend approval, citing the exact numbers given.",
         output="A recommendation posted to the ticket log; ticket moves to Awaiting Approval.",
         fallback="The formatted real plan output, without Gemini's narration layer.",
+    ),
+    AgentSpec(
+        key="ops_readout_agent", name="Ops Read-Out Agent", stage="Summary",
+        purpose="Writes the Summary tab's headline paragraph: overall status, the single biggest issue, and "
+                "the recommended next action -- read once instead of scanning every table.",
+        inputs=["Pipeline scorecard + per-pipeline SLA status", "Table freshness list",
+                "Open incident and awaiting-approval counts"],
+        grounding_data="The exact same real numbers already rendered below it on the Summary tab (Demo Mode's "
+                       "curated sample, or Production Mode's real Composer/BigQuery data) -- Gemini narrates "
+                       "and prioritizes, it never invents a pipeline or a number.",
+        decision_task="Name the single most significant issue and the one recommended next action, in 2-3 "
+                      "sentences, or say plainly that nothing needs attention.",
+        output="A read-out paragraph shown above the scorecard.",
+        fallback="A templated sentence built from the same real numbers (worst pipeline/table + pending approvals).",
     ),
 ]
 

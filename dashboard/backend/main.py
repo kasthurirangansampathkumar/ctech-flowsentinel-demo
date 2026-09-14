@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import ai_agents
 import summary_data
 import ticket_engine
 
@@ -132,8 +133,20 @@ def pipelines():
 
 
 @app.get("/api/incidents")
-def incidents():
-    """Live GitHub Issues labeled 'incident' -- the auto-created triage tickets."""
+def incidents(live: bool = Depends(is_live_mode)):
+    """Demo Mode: the local ticket board's own classified tickets, standing in
+    for 'incidents' -- Production Mode: real GitHub Issues labeled 'incident'."""
+    if not live:
+        tickets = [t for t in ticket_engine.STORE.all() if t.status != ticket_engine.NEW]
+        return {"issues": [
+            {
+                "number": t.id, "title": t.title,
+                "state": "closed" if t.status == ticket_engine.RESOLVED else "open",
+                "labels": [t.category] if t.category else [],
+                "url": t.github_issue_url,
+            } for t in tickets
+        ]}
+
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/issues"
     try:
         resp = requests.get(url, headers=github_headers(), params={"state": "all", "labels": "incident"}, timeout=10, verify=certifi.where())
@@ -154,7 +167,16 @@ def incidents():
 
 
 @app.get("/api/pull-requests")
-def pull_requests():
+def pull_requests(live: bool = Depends(is_live_mode)):
+    """Demo Mode: tickets sitting in Awaiting Approval -- Production Mode: real
+    open GitHub PRs."""
+    if not live:
+        tickets = [t for t in ticket_engine.STORE.all() if t.status == ticket_engine.AWAITING_APPROVAL]
+        return {"pull_requests": [
+            {"number": t.id, "title": t.title, "url": None, "branch": t.category, "kind": "ticket"}
+            for t in tickets
+        ]}
+
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls"
     try:
         resp = requests.get(url, headers=github_headers(), params={"state": "open"}, timeout=10, verify=certifi.where())
@@ -164,7 +186,7 @@ def pull_requests():
         return {"error": str(exc), "pull_requests": []}
 
     return {"pull_requests": [
-        {"number": p["number"], "title": p["title"], "url": p["html_url"], "branch": p["head"]["ref"]}
+        {"number": p["number"], "title": p["title"], "url": p["html_url"], "branch": p["head"]["ref"], "kind": "github"}
         for p in prs
     ]}
 
@@ -241,51 +263,6 @@ def feed_sla():
     }
 
 
-# The four agent workflows -- everything the framework automates end to end.
-# Human involvement stops at approve-pr / run-backfill above; these are the
-# detection/generation steps an on-call engineer would otherwise do by hand.
-WORKFLOWS = {
-    "triage": {
-        "label": "Run Autonomous Triage (Demo 1)",
-        "description": "Gemini parses the failure log and files a GitHub incident issue.",
-        "script": DEMOS_DIR / "demo_1_autonomous_triage" / "triage_agent.py",
-    },
-    "inject-failure": {
-        "label": "Inject Schema Drift (Demo 1 setup)",
-        "description": "Simulates a vendor schema drift to trigger the pipeline failure.",
-        "script": DEMOS_DIR / "demo_1_autonomous_triage" / "inject_failure.py",
-    },
-    "code-repair": {
-        "label": "Generate Code Patch (Demo 2)",
-        "description": "Gemini drafts the SQL fix and opens a PR for human approval.",
-        "script": DEMOS_DIR / "demo_2_code_patch_and_approval" / "code_repair_agent.py",
-    },
-    "feed-check": {
-        "label": "Check Feed SLA (Demo 4)",
-        "description": "Checks vendor feed arrival and auto-pauses the DAG on breach.",
-        "script": DEMOS_DIR / "demo_4_source_feed_sentinel" / "feed_sentinel.py",
-    },
-    "feed-resume": {
-        "label": "Simulate Feed Landing & Resume (Demo 4)",
-        "description": "Simulates the delayed file landing and auto-resumes the DAG.",
-        "script": DEMOS_DIR / "demo_4_source_feed_sentinel" / "resume_pipeline.py",
-    },
-}
-
-
-@app.get("/api/workflows")
-def list_workflows():
-    return {"workflows": [{"key": k, "label": v["label"], "description": v["description"]} for k, v in WORKFLOWS.items()]}
-
-
-@app.post("/api/workflows/{key}/run", dependencies=[Depends(require_admin_if_live)])
-def run_workflow(key: str, live: bool = Depends(is_live_mode)):
-    workflow = WORKFLOWS.get(key)
-    if not workflow:
-        raise HTTPException(status_code=404, detail=f"Unknown workflow '{key}'")
-
-    log = ticket_engine.run_agent_script(workflow["script"], live=live)
-    return {"ok": True, "log": log[-4000:], "errors": "", "mode": "live" if live else "visual"}
 
 
 # ---------------------------------------------------------------------------
@@ -487,13 +464,25 @@ def summary_tables(live: bool = Depends(is_live_mode)):
     return summary_data.get_table_freshness(live=live)
 
 
+@app.get("/api/summary/readout")
+def summary_readout(live: bool = Depends(is_live_mode)):
+    """The Ops Read-Out Agent's headline paragraph -- reads the same real
+    numbers the rest of the Summary tab shows, in whichever mode is active."""
+    pipeline_data = summary_data.get_pipeline_runs(live=live)
+    table_data = summary_data.get_table_freshness(live=live)
+    tickets = ticket_engine.STORE.all()
+    ticket_stats = {
+        "open_incidents": sum(1 for t in tickets if t.status not in (ticket_engine.NEW, ticket_engine.RESOLVED)),
+        "awaiting_approval": sum(1 for t in tickets if t.status == ticket_engine.AWAITING_APPROVAL),
+    }
+    return ai_agents.ops_readout_agent(pipeline_data, table_data, ticket_stats, live=live)
+
+
 @app.get("/api/agents")
 def list_agents():
     """Documents every real AI agent in the framework -- purpose, inputs,
     grounding data, and what it decides. Same data the slide deck is built
     from, so this endpoint and the deck can never drift from each other."""
-    import ai_agents
-
     return {"agents": [
         {
             "key": a.key, "name": a.name, "stage": a.stage, "purpose": a.purpose,

@@ -134,6 +134,13 @@
   /* ---- Summary view ---- */
   .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin: 28px 0 12px; }
   .section-title:first-child { margin-top: 0; }
+
+  .readout-card { margin-bottom: 18px; border-left: 3px solid var(--accent); }
+  .readout-card h2 { display: flex; align-items: center; gap: 8px; }
+  .readout-tag { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: none; letter-spacing: 0; }
+  .readout-tag.gemini { background: var(--accent-tint); color: var(--accent-ink); }
+  .readout-tag.template { background: var(--grey-tint); color: var(--grey); }
+  .readout-text { font-size: 14.5px; line-height: 1.55; color: var(--text); margin: 0; }
   .scorecard-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 8px; }
   .scorecard-tile {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -200,6 +207,11 @@
 
   <section id="view-overview" class="view active">
 
+    <div class="card readout-card">
+      <h2>Ops Read-Out <span class="readout-tag" id="readout-tag"></span></h2>
+      <p id="readout-text" class="readout-text">Loading…</p>
+    </div>
+
     <div class="scorecard-row" id="scorecard"><div class="empty">Loading…</div></div>
 
     <h2 class="section-title">Pipeline Health — Last 5 Runs</h2>
@@ -230,16 +242,12 @@
         <div id="feed-status"><div class="empty">Loading…</div></div>
       </div>
       <div class="card">
-        <h2>Incidents (GitHub Issues)</h2>
+        <h2>Incidents</h2>
         <div id="incidents"><div class="empty">Loading…</div></div>
       </div>
       <div class="card">
         <h2>PRs Awaiting Approval</h2>
         <div id="prs"><div class="empty">Loading…</div></div>
-      </div>
-      <div class="card">
-        <h2>Available Workflows</h2>
-        <div id="workflows"><div class="empty">Loading…</div></div>
       </div>
     </div>
   </section>
