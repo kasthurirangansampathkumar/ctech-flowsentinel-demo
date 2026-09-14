@@ -374,7 +374,14 @@ def backfill_apply_agent(ticket, live: bool = True) -> str:
 # state, what's the single biggest problem, what to do about it.
 # ---------------------------------------------------------------------------
 
-def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict, live: bool = True) -> dict:
+def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict, live: bool = True,
+                       tickets: Optional[list] = None) -> dict:
+    """`tickets` is the raw ticket-board list (Demo Mode's actual injected/
+    classified failures, or Production Mode's real synced GitHub issues) --
+    when present, the read-out leads with what's actually on the board right
+    now instead of only the static pipeline/table scorecard, so injecting a
+    new failure and running the Issue Segment Agent visibly changes what
+    this agent reports."""
     pipelines = pipeline_data.get("pipelines", [])
     tables = table_data.get("tables", [])
     scorecard = pipeline_data.get("scorecard", {})
@@ -383,40 +390,68 @@ def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict,
     non_sla_tables = [t for t in tables if not t.get("in_sla")]
     worst_table = non_sla_tables[0] if non_sla_tables else None  # tables list is sorted breach-first, oldest-first
 
+    tickets = tickets or []
+    unclassified = [t for t in tickets if t.get("status") == "new"]
+    active = [t for t in tickets if t.get("status") not in ("new", "resolved")]
+    # Most recent active ticket per category label, most-recent-first -- what's actually on the board.
+    active_by_recency = sorted(active, key=lambda t: t.get("created_at", 0), reverse=True)
+    ticket_line_items = [
+        f"'{t.get('category_label') or t.get('title')}' on {t.get('inputs', {}).get('pipeline') or 'unspecified pipeline'} "
+        f"({t.get('status')})" for t in active_by_recency[:5]
+    ]
+
     facts = (
         f"Pipelines: {scorecard.get('in_sla', 0)}/{scorecard.get('total_pipelines', 0)} in SLA. "
         f"Breaching pipelines: {', '.join(breaching_pipelines) if breaching_pipelines else 'none'}. "
         f"Non-SLA tables: {len(non_sla_tables)} of {len(tables)}"
         + (f", worst is '{worst_table['table']}' ({worst_table['days_since']} days stale)" if worst_table else "")
         + f". Open incidents: {ticket_stats.get('open_incidents', 0)}. "
-        f"Awaiting human approval: {ticket_stats.get('awaiting_approval', 0)}."
+        f"Awaiting human approval: {ticket_stats.get('awaiting_approval', 0)}. "
+        f"Unclassified tickets on the board: {len(unclassified)}. "
+        + (f"Active tickets right now: {'; '.join(ticket_line_items)}." if ticket_line_items else "No active tickets on the board.")
     )
 
     prompt = (
         "You are the Ops Read-Out Agent for FlowSentinel AI, an autonomous data-engineering on-call framework. "
-        "Given these real, current numbers from the Summary dashboard:\n\n"
+        "Given these real, current numbers from the Summary dashboard and Ticket Board:\n\n"
         f"{facts}\n\n"
         "Write a 2-3 sentence executive read-out for the on-call engineer covering: (1) overall status, "
-        "(2) the single most significant issue right now -- name it specifically, don't just say 'some pipelines' "
-        "-- and (3) the one recommended next action. Plain text, no markdown, no preamble like 'Here is a summary'. "
-        "If everything is healthy, say so plainly and don't invent a problem."
+        "(2) the single most significant issue right now -- prefer naming an actual active ticket and the pipeline "
+        "it's on over a generic SLA number, don't just say 'some pipelines' -- and (3) the one recommended next "
+        "action (e.g. classify the unclassified tickets, approve a pending fix, or review a specific breach). "
+        "Plain text, no markdown, no preamble like 'Here is a summary'. "
+        "If everything is healthy and the board is empty, say so plainly and don't invent a problem."
     )
     ai_text = call_gemini(prompt, live=live)
     if ai_text:
         return {"text": ai_text.strip(), "engine": "gemini"}
 
-    if not breaching_pipelines and not non_sla_tables:
+    if ticket_line_items:
+        headline = ticket_line_items[0]
+        fallback = f"Active on the Ticket Board: {headline}."
+        if len(active_by_recency) > 1:
+            fallback += f" {len(active_by_recency)} tickets total are in flight."
+        if unclassified:
+            fallback += f" Recommended action: run the Issue Segment Agent on the {len(unclassified)} unclassified ticket(s)."
+        elif ticket_stats.get("awaiting_approval"):
+            fallback += f" Recommended action: review and approve the {ticket_stats.get('awaiting_approval')} pending fix(es)."
+        else:
+            fallback += " Recommended action: check its progress on the Ticket Board."
+    elif unclassified:
+        fallback = (
+            f"{len(unclassified)} new ticket(s) just landed on the board, not yet classified. "
+            "Recommended action: run the Issue Segment Agent to route them to the right queue."
+        )
+    elif not breaching_pipelines and not non_sla_tables:
         fallback = (
             f"All {scorecard.get('total_pipelines', 0)} pipelines are in SLA and every tracked table is fresh. "
-            f"{ticket_stats.get('awaiting_approval', 0)} ticket(s) awaiting approval. No action needed right now."
+            "No open tickets right now. No action needed."
         )
     else:
         worst_desc = f"table '{worst_table['table']}' hasn't refreshed in {worst_table['days_since']} days" if worst_table else "a breaching pipeline"
         fallback = (
             f"{scorecard.get('in_sla', 0)} of {scorecard.get('total_pipelines', 0)} pipelines are in SLA. "
-            f"Biggest concern: {worst_desc}. "
-            f"Recommended action: review it on the Ticket Board"
-            + (f" and approve the {ticket_stats.get('awaiting_approval')} pending fix(es)." if ticket_stats.get("awaiting_approval") else ".")
+            f"Biggest concern: {worst_desc}. Recommended action: review it on the Ticket Board."
         )
     return {"text": fallback, "engine": "template"}
 

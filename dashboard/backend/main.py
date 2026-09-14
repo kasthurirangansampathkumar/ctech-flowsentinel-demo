@@ -484,7 +484,10 @@ def summary_readout(live: bool = Depends(is_live_mode)):
         "open_incidents": sum(1 for t in tickets if t.status not in (ticket_engine.NEW, ticket_engine.RESOLVED)),
         "awaiting_approval": sum(1 for t in tickets if t.status == ticket_engine.AWAITING_APPROVAL),
     }
-    return ai_agents.ops_readout_agent(pipeline_data, table_data, ticket_stats, live=live)
+    return ai_agents.ops_readout_agent(
+        pipeline_data, table_data, ticket_stats, live=live,
+        tickets=[t.to_dict() for t in tickets],
+    )
 
 
 @app.get("/api/agents")
