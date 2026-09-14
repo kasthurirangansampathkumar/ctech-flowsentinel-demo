@@ -9,83 +9,41 @@
 
 ## Why this document exists
 
-The framework is up and running locally with real GCP resources (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini) already provisioned and working under my own account. Three access gaps remain, and each needs someone with more privilege than I currently have to unblock. This document gives the exact commands and steps — nothing here needs guesswork or a support ticket, just someone with the right role/access running through the sections below.
-
-**Update:** you already granted my account `roles/iam.serviceAccountUser` and `roles/logging.configWriter` — thank you, that got the Cloud Run deploy most of the way there. I ran it end to end to find exactly what's still missing, so Section 1 below is now a single, verified role instead of the original six-role guess. Separately, I've now got GitHub authenticated locally (SSH key via `gh auth login`) and can push to my personal repo fine — which is how Section 2 below surfaced: pushing/reading the org repo under my own account returns `404`, confirming I'm not yet a collaborator on it.
+The framework is fully built and running — GCP resources (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini, Cloud Run), the dashboard, and the AI agent framework are all live. Two access gaps remain, both GitHub-side, plus one new item to finish wiring up CI/CD. Everything else that was originally requested here has been resolved.
 
 ---
 
-## 1. GCP: One role left to unblock Cloud Run deploy
+## ✅ Resolved — no action needed
 
-### Who can do this
-**`Pam.master22@latentview.com`** — confirmed via `gcloud projects get-iam-policy` to be the only `roles/owner` on `ctech-flowsentinel-ai`. I only have `roles/editor` plus the two roles above, none of which include `resourcemanager.projects.setIamPolicy` — I still can't grant IAM roles myself.
+### 1. GCP: Artifact Registry write access for Cloud Run deploys
+`roles/artifactregistry.writer` was granted to `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com`. Verified: the dashboard is deployed and live at the shared Cloud Run URL, redeploys work end to end.
 
-### Why it's needed
-With the `iam.serviceAccountUser` grant, I can now deploy using `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` as the build identity (working around this project having no default Compute Engine service account). I ran the actual deploy — **the build itself succeeds**, but pushing the built image to Artifact Registry fails:
-
-```
-denied: Permission 'artifactregistry.repositories.uploadArtifacts' denied on resource
-'//artifactregistry.googleapis.com/projects/ctech-flowsentinel-ai/locations/us-central1/repositories/cloud-run-source-deploy'
-```
-
-That's the one missing piece — `roles/artifactregistry.writer` on the same service account.
-
-### Command to run
-
-```bash
-gcloud projects add-iam-policy-binding ctech-flowsentinel-ai \
-  --member="serviceAccount:flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com" \
-  --role="roles/artifactregistry.writer" \
-  --condition=None
-```
-
-One role, one existing service account — nothing new created, no other access touched.
-
-### (Recommended, optional) Let me self-serve future IAM changes
-
-Every time the framework needs a new IAM grant, it currently has to come back to you. If you're comfortable with it, granting my account `roles/resourcemanager.projectIamAdmin` (narrower than full Owner) on `ctech-flowsentinel-ai` would let me handle IAM changes like the one above myself going forward:
-
-```bash
-gcloud projects add-iam-policy-binding ctech-flowsentinel-ai \
-  --member="user:kasthurirangan.sampathkumar@latentview.com" \
-  --role="roles/resourcemanager.projectIamAdmin" \
-  --condition=None
-```
-
-### How to verify it worked
-
-```bash
-gcloud projects get-iam-policy ctech-flowsentinel-ai \
-  --flatten="bindings[].members" \
-  --filter="bindings.members:flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com" \
-  --format="table(bindings.role)"
-```
-Should include `roles/artifactregistry.writer` in the list.
+### 2. GitHub: Collaborator access on the org repo
+My account (`kasthurirangansampathkumar`) was added as a collaborator on `LatentView-Analytics-Ltd/ctech-flowsentinel-demo`. Verified: `git push org main` succeeds from my local machine (last confirmed with commit `406a307`).
 
 ---
 
-## 2. GitHub: Add my account as a collaborator on the org repo
-
-### Who can do this
-Whoever administers repository access for **LatentView-Analytics-Ltd/ctech-flowsentinel-demo** — org **Settings → Collaborators and teams** (or repo **Settings → Collaborators**).
-
-### Why it's needed
-I can authenticate to GitHub fine (SSH key registered, `gh auth login` working), but my account (`kasthurirangansampathkumar`) isn't a collaborator on the org repo — pushing or even reading it via the API returns `404 Not Found`, which is what a private repo returns to an account with no access at all (rather than a `403`, to avoid confirming the repo exists). This blocks me from pushing my local commits to the shared org repo, separate from the PAT issue in Section 3 below.
-
-### Steps
-1. Go to `https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/settings/access`
-2. **Add people** → search `kasthurirangansampathkumar`
-3. Role: **Write** (needed to push commits; the [teammate replication guide](TEAMMATE_REPLICATION_GUIDE.md) asks for the same for anyone else replicating this)
-
----
+## ⏳ Still open
 
 ## 3. GitHub: Approve a fine-grained PAT for the org repo
 
 ### Who can do this
 Whoever administers the **LatentView-Analytics-Ltd** GitHub organization's Personal Access Token policy (org **Settings → Personal access tokens → Pending requests**), or whoever can grant me permission to generate one scoped to this repo.
 
-### Why it's needed
-The framework's agents (RCA ticket creation, PR generation/merge, GitHub Projects sync) all call the GitHub API on behalf of the `LatentView-Analytics-Ltd/ctech-flowsentinel-demo` repo. Right now there's no valid token in GCP Secret Manager (`github-pat-token` exists as a secret but has no working value), so every GitHub-touching feature falls back to a safe simulated/offline mode — the demo still works, but nothing actually reaches the real repo.
+### Current status: still not working
+Re-tested against the live Cloud Run app just now:
+
+```bash
+curl -s "https://flowsentinel-remediation-agent-673338764809.us-central1.run.app/api/incidents" \
+  -H "X-Demo-Mode: live"
+```
+
+Returns:
+```json
+{"error":"404 Client Error: Not Found for url: https://api.github.com/repos/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/issues?state=all&labels=incident","issues":[]}
+```
+
+A `404` from the GitHub API on a repo I otherwise have collaborator access to (Section 2, above) means there's still no valid token in `github-pat-token` in Secret Manager — GitHub returns 404 rather than 401/403 for an invalid/missing token, to avoid confirming private-repo existence to unauthenticated callers. **Production Mode's GitHub-backed features (real Incidents, real PRs Awaiting Approval, GitHub Projects sync) are blocked on this token.** Demo Mode is unaffected — it never calls the real GitHub API.
 
 ### Steps
 1. I generate a **fine-grained PAT**: GitHub → my profile → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
@@ -106,10 +64,41 @@ The framework's agents (RCA ticket creation, PR generation/merge, GitHub Project
 
 ---
 
+## 4. GitHub: Add two Actions secrets to enable CI/CD for Composer DAGs
+
+### Why this exists
+The Airflow DAGs that run the demo's data pipelines live in version control at [`composer_dags/`](composer_dags/) in this repo (see [`TEAMMATE_REPLICATION_GUIDE.md`](TEAMMATE_REPLICATION_GUIDE.md) for how developers browse/debug them). Previously, deploying a DAG change to the live Composer environment meant someone manually running `gsutil rsync` from their laptop. I've now built a GitHub Actions workflow ([`.github/workflows/deploy-dags.yml`](.github/workflows/deploy-dags.yml)) that automatically validates and syncs any change under `composer_dags/` to the Composer environment's GCS bucket on every push to `main` — no manual step, no long-lived key on anyone's laptop.
+
+It authenticates to GCP using **Workload Identity Federation (WIF)** — GitHub Actions gets a short-lived GCP credential via OIDC, scoped to only this exact repo, with no service account key ever stored anywhere. I've already created the WIF pool, provider, and IAM binding on the GCP side (no admin action needed there). The only remaining step is adding two **repository secrets** on GitHub, which needs repo Admin access (I only have Write via Section 2).
+
+### Who can do this
+Whoever has **Admin** access to `LatentView-Analytics-Ltd/ctech-flowsentinel-demo` (repo **Settings → Secrets and variables → Actions → New repository secret**), or grants me Admin so I can add them myself.
+
+### Steps
+Go to `https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/settings/secrets/actions` and add exactly these two secrets:
+
+| Secret name | Value |
+|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/673338764809/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider` |
+| `GCP_SERVICE_ACCOUNT` | `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` |
+
+Neither value is a secret credential in the traditional sense — they're identifiers, not keys — but they're stored as Actions secrets per Google's own recommended pattern for WIF, since anyone able to trigger a workflow in the repo can otherwise see plain env vars in logs.
+
+### How to verify it worked
+Push any trivial change under `composer_dags/` (or trigger it manually via the **Actions** tab → "Deploy Composer DAGs" → **Run workflow**), and confirm the run goes green. A green run means the DAG file(s) synced to `gs://us-central1-ctech-flowsenti-34a08e5b-bucket/dags/` with no service account key ever touching GitHub's servers.
+
+### What this unlocks
+- Any DAG change merged to `main` reaches the live Composer environment automatically, with a syntax-validation gate that stops a broken file before it can break the environment's DAG parser
+- No one needs local `gsutil`/GCP credentials on their laptop just to ship a pipeline change
+- A visible, auditable deploy history for pipeline code (the Actions run log), separate from git history
+
+---
+
 ## Checklist for the admin
 
-- [ ] Grant `roles/artifactregistry.writer` to `flowsentinel-ai@ctech-flowsentinel-ai.iam.gserviceaccount.com` (Section 1) — the one thing left blocking Cloud Run deploy
-- [ ] Add `kasthurirangansampathkumar` as a Write collaborator on `LatentView-Analytics-Ltd/ctech-flowsentinel-demo` (Section 2) — blocks pushing local commits to the shared repo
-- [ ] Approve my fine-grained PAT request for `ctech-flowsentinel-demo` once I've generated it (Section 3)
+- [x] ~~Grant `roles/artifactregistry.writer` to the service account~~ — done
+- [x] ~~Add `kasthurirangansampathkumar` as a Write collaborator on the org repo~~ — done
+- [ ] Approve my fine-grained PAT request for `ctech-flowsentinel-demo` once I've generated it (Section 3) — **blocks real GitHub Issues/PRs/Projects sync in Production Mode**
+- [ ] Add the two `GCP_WORKLOAD_IDENTITY_PROVIDER` / `GCP_SERVICE_ACCOUNT` secrets, or grant me Admin to add them myself (Section 4) — **blocks the new DAG CI/CD pipeline from ever running**
 
-Nothing else is currently blocking the framework — everything else (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini, GCS) is already working under my existing access.
+Everything else (BigQuery, Pub/Sub, Cloud Composer, Vertex AI Gemini, GCS, Cloud Run) is already working under my existing access.
