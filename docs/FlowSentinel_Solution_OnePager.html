@@ -1,0 +1,372 @@
+<title>FlowSentinel AI — Solution One-Pager</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ink: #12191c;
+    --panel: #f2f8f7;
+    --panel-2: #ffffff;
+    --line: #dbe4e4;
+    --fog: #6d7d80;
+    --fog-dim: #e9eded;
+    --signal: #0e8272;
+    --signal-dim: #dcf1ec;
+    --gold: #9c6b00;
+    --gold-dim: #fbecc9;
+    --paper: #f5f7f7;
+    --muted: #5c6b6e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Source Sans 3", system-ui, sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 48px 44px; }
+
+  /* ---------- Header ---------- */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 22px; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--signal); margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); flex: none; }
+  h1 {
+    font-family: Fraunces, Georgia, serif; font-weight: 900; font-optical-sizing: auto;
+    font-size: 42px; line-height: 1.06; margin: 0; color: var(--ink); text-wrap: balance;
+    max-width: 20ch;
+  }
+  .dek {
+    font-size: 16px; line-height: 1.55; color: var(--muted); max-width: 74ch; margin: 14px 0 0;
+  }
+
+  /* ---------- Stat strip ---------- */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); margin-top: 22px; border: 1px solid var(--line);
+  }
+  .stat { background: var(--panel-2); padding: 16px 18px; }
+  .stat .n {
+    font-family: Fraunces, Georgia, serif; font-weight: 800; font-size: 30px; color: var(--signal);
+    line-height: 1; display: flex; align-items: baseline; gap: 4px;
+  }
+  .stat .n .unit { font-family: "Source Sans 3", sans-serif; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .stat .label {
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted); margin-top: 6px;
+  }
+
+  /* ---------- Section scaffolding ---------- */
+  section { margin-top: 30px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px;
+  }
+  .sec-num {
+    font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600; color: var(--gold);
+  }
+  .sec-title {
+    font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 19px; margin: 0; color: var(--ink);
+  }
+  p.body-text { font-size: 14.5px; line-height: 1.62; color: var(--ink); margin: 0 0 10px; max-width: 82ch; }
+  p.body-text:last-child { margin-bottom: 0; }
+  p.body-text strong { color: var(--ink); }
+
+  /* ---------- Two-column layout ---------- */
+  .cols { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 34px; }
+
+  /* ---------- Capability groups ---------- */
+  .cap-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px; }
+  .cap-group {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 13px 15px;
+  }
+  .cap-group h3 {
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--signal); margin: 0 0 8px;
+  }
+  .cap-group ul { margin: 0; padding-left: 16px; }
+  .cap-group li { font-size: 13px; line-height: 1.5; color: var(--ink); margin-bottom: 5px; }
+  .cap-group li:last-child { margin-bottom: 0; }
+  .cap-group li b { font-weight: 600; }
+
+  /* ---------- Tier bar ---------- */
+  .tiers { display: flex; gap: 10px; margin-top: 4px; }
+  .tier { flex: 1; border-radius: 8px; padding: 12px 14px; border: 1px solid var(--line); }
+  .tier.auto { background: var(--signal-dim); }
+  .tier.assist { background: var(--gold-dim); }
+  .tier.advisory { background: var(--fog-dim); }
+  .tier .t-n { font-family: Fraunces, Georgia, serif; font-weight: 800; font-size: 22px; }
+  .tier.auto .t-n { color: var(--signal); }
+  .tier.assist .t-n { color: var(--gold); }
+  .tier.advisory .t-n { color: var(--fog); }
+  .tier .t-label {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted); margin-top: 3px;
+  }
+  .tier .t-desc { font-size: 12px; color: var(--ink); margin-top: 6px; line-height: 1.4; }
+
+  /* ---------- Value prop list ---------- */
+  .value-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+  .value-list li { display: flex; gap: 10px; align-items: flex-start; }
+  .value-list .vi {
+    flex: none; width: 20px; height: 20px; border-radius: 5px; background: var(--signal-dim);
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .value-list .vi svg { width: 12px; height: 12px; color: var(--signal); }
+  .value-list p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+  .value-list p b { font-weight: 700; }
+
+  /* ---------- Audience chips ---------- */
+  .audience-block { margin-bottom: 16px; }
+  .audience-block:last-child { margin-bottom: 0; }
+  .audience-block h3 {
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 7px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px; font-weight: 600; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px;
+  }
+
+  /* ---------- Challenges ---------- */
+  .challenge-list { list-style: none; margin: 0; padding: 0; }
+  .challenge-list li {
+    padding: 10px 0; border-bottom: 1px solid var(--line); display: grid;
+    grid-template-columns: 15ch 1fr; gap: 14px; align-items: baseline;
+  }
+  .challenge-list li:last-child { border-bottom: none; }
+  .challenge-list .c-title { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+  .challenge-list .c-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ---------- Metrics table ---------- */
+  table.metrics { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.metrics th {
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted); text-align: left; padding: 0 14px 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  table.metrics th:not(:first-child), table.metrics td:not(:first-child) { text-align: left; }
+  table.metrics td { font-size: 13.5px; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.metrics tr:last-child td { border-bottom: none; }
+  table.metrics td.metric-name { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  table.metrics td.today-val { color: var(--fog); }
+  table.metrics td.after-val { color: var(--signal); font-weight: 600; }
+  .metrics-note {
+    font-size: 12px; color: var(--muted); margin-top: 10px; padding: 10px 13px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 7px; line-height: 1.5;
+  }
+  .metrics-note b { color: var(--ink); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 24px;
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+  }
+  footer p.thesis {
+    font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 18px; color: var(--ink);
+    margin: 0; text-wrap: balance; max-width: 44ch;
+  }
+  footer p.thesis span { color: var(--gold); }
+  .brand {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted);
+    text-align: right; white-space: nowrap; line-height: 1.6;
+  }
+
+  @media (max-width: 860px) {
+    .cols, .cap-groups { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .challenge-list li { grid-template-columns: 1fr; gap: 3px; }
+    footer { flex-direction: column; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow"><span class="dot"></span>FlowSentinel AI · Solution One-Pager</p>
+    <h1>AI-first on-call automation for Data Engineering</h1>
+    <p class="dek">A GCP-native framework that classifies, diagnoses, and resolves data-pipeline incidents automatically — leaving one human decision instead of a full night of manual investigation.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="n">14</div><div class="label">Failure categories covered</div></div>
+      <div class="stat"><div class="n">13</div><div class="label">Purpose-built Gemini agents</div></div>
+      <div class="stat"><div class="n">~93<span class="unit">%</span></div><div class="label">Categories needing zero or one-click human input</div></div>
+      <div class="stat"><div class="n">100<span class="unit">%</span></div><div class="label">Incidents with a real GitHub audit trail</div></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Solution Description</h2></div>
+    <p class="body-text">
+      <strong>FlowSentinel AI</strong> is a GCP-native, AI-first on-call automation framework for Data Engineering teams. It sits on top of an
+      organization's existing pipeline stack — Cloud Composer/Airflow, BigQuery, GCS, Pub/Sub — and turns the four things a human on-call
+      engineer normally does by hand into instant, AI-driven steps: <strong>investigate, triage, diagnose, and draft a fix.</strong> A human is
+      needed for exactly one thing: approve, or don't.
+    </p>
+    <p class="body-text">
+      Every incident — a stalled DAG, a missed SLA, schema drift, a corrupted table — is automatically classified, routed to the right automation
+      tier, diagnosed by a purpose-built Gemini agent, and either fixed autonomously or handed to the on-call engineer as a one-click-approve
+      recommendation, with a real GitHub Issue/PR trail the whole way through.
+    </p>
+    <p class="body-text">
+      It is built as a <strong>reusable framework</strong>, not a one-off script — the agent logic is fully decoupled from any one client's
+      pipelines, so a working engagement becomes a fast-start template for the next.
+    </p>
+  </section>
+
+  <section class="cols">
+    <div>
+      <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Key Capabilities</h2></div>
+      <div class="cap-groups">
+        <div class="cap-group">
+          <h3>Detection &amp; Classification</h3>
+          <ul>
+            <li><b>Issue Segment Agent</b> classifies free-text incidents into 14 categories in seconds, with a confidence score.</li>
+            <li>Works from vendor incident text or a synced GitHub Issue — no proprietary format required.</li>
+          </ul>
+        </div>
+        <div class="cap-group">
+          <h3>Automation Tiers</h3>
+          <ul>
+            <li><b>Autonomous</b> — agent resolves end-to-end, no human step.</li>
+            <li><b>AI-Assisted</b> — agent diagnoses and drafts the fix; one-click human approval.</li>
+            <li><b>Advisory</b> — credential/IAM changes are never auto-remediated, by design.</li>
+          </ul>
+        </div>
+        <div class="cap-group">
+          <h3>Grounded Agents</h3>
+          <ul>
+            <li>13 agents, one per failure family — Source Feed Sentinel, API Health, Orchestration Watchdog, Query Doctor, Data Observability, Infra Health, Capacity Forecaster, Pace Predictor, Backfill, Schema Drift, DQ Check, and the Ops Read-Out summarizer.</li>
+            <li>Each grounded in a real check (GCS file existence, BigQuery row-count comparison, live Composer/Logging status) before Gemini narrates or decides.</li>
+          </ul>
+        </div>
+        <div class="cap-group">
+          <h3>Native Integration</h3>
+          <ul>
+            <li>Every ticket mirrors to a real GitHub Issue; approved fixes become real PRs.</li>
+            <li>Demo Mode / Production Mode toggle — one dashboard, same code, safely demoable or fully live.</li>
+            <li>CI/CD: DAG changes on GitHub auto-validate and auto-deploy to Composer via Workload Identity Federation.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Value Proposition</h2></div>
+      <ul class="value-list">
+        <li>
+          <span class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>
+          <p><b>Collapses the on-call night</b> — three of four manual steps done instantly; only a one-click approval remains for anything not fully autonomous.</p>
+        </li>
+        <li>
+          <span class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>
+          <p><b>AI-first, not AI-bolted-on</b> — every agent reasons over real, live data first; this is decision automation with a verifiable trail, not a guessing chatbot.</p>
+        </li>
+        <li>
+          <span class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>
+          <p><b>Human judgment only where it matters</b> — routine failures never reach a person; judgment-heavy or security-sensitive ones always do.</p>
+        </li>
+        <li>
+          <span class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>
+          <p><b>No new tools to adopt</b> — tickets are real GitHub Issues, fixes are real PRs, on the workflow teams already use.</p>
+        </li>
+        <li>
+          <span class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>
+          <p><b>Replicable, not bespoke</b> — the agent framework is client-agnostic; a demo in one engagement is a fast-start template for the next.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">—</span><h2 class="sec-title">Automation Model</h2></div>
+    <div class="tiers">
+      <div class="tier auto">
+        <div class="t-n">8 categories</div>
+        <div class="t-label">Autonomous</div>
+        <div class="t-desc">Agent diagnoses and resolves end-to-end. No human step.</div>
+      </div>
+      <div class="tier assist">
+        <div class="t-n">5 categories</div>
+        <div class="t-label">AI-Assisted</div>
+        <div class="t-desc">Agent diagnoses and drafts the fix. One human click approves.</div>
+      </div>
+      <div class="tier advisory">
+        <div class="t-n">1 category</div>
+        <div class="t-label">Advisory-only</div>
+        <div class="t-desc">Credential / IAM changes — deliberately never auto-remediated.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Targeted Industry / Function / Roles</h2></div>
+      <div class="audience-block">
+        <h3>Industry</h3>
+        <div class="chip-row">
+          <span class="chip">Retail &amp; E-commerce</span>
+          <span class="chip">Financial Services</span>
+          <span class="chip">Healthcare &amp; Insurance</span>
+          <span class="chip">Logistics &amp; Supply Chain</span>
+          <span class="chip">Any GCP + Composer/BigQuery shop</span>
+        </div>
+      </div>
+      <div class="audience-block">
+        <h3>Function</h3>
+        <div class="chip-row">
+          <span class="chip">Data Engineering</span>
+          <span class="chip">Data Platform / DataOps</span>
+          <span class="chip">Site Reliability</span>
+        </div>
+      </div>
+      <div class="audience-block">
+        <h3>Roles</h3>
+        <div class="chip-row">
+          <span class="chip">DE On-Call Engineers</span>
+          <span class="chip">DataOps Leads</span>
+          <span class="chip">Directors of Data Engineering</span>
+          <span class="chip">CTO / VP Data &amp; Analytics</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Key Challenges Addressed</h2></div>
+      <ul class="challenge-list">
+        <li><span class="c-title">On-call burnout</span><span class="c-desc">Manual cross-referencing across three or four systems at all hours, for every incident regardless of severity.</span></li>
+        <li><span class="c-title">Inconsistent response</span><span class="c-desc">Quality depends on who's on call; an agent applies the same diagnostic logic every time.</span></li>
+        <li><span class="c-title">Silent data failures</span><span class="c-desc">A pipeline reports "success" while the data is wrong — the hardest failure mode to catch by hand.</span></li>
+        <li><span class="c-title">Vendor dependency risk</span><span class="c-desc">Feed delays, schema drift, and API instability sit outside DE's control but land on DE's on-call plate.</span></li>
+        <li><span class="c-title">Slow root cause</span><span class="c-desc">Manually reading logs and query history is the single biggest time sink in an incident.</span></li>
+        <li><span class="c-title">Loss-of-control objection</span><span class="c-desc">Advisory tier and mandatory approval for AI-Assisted fixes answer "let AI touch prod" by design.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Business Impact Metrics</h2></div>
+    <table class="metrics">
+      <thead>
+        <tr><th>Metric</th><th>Today — manual on-call</th><th>With FlowSentinel AI</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="metric-name">Time to triage an incident</td><td class="today-val">15–30 min of manual cross-referencing</td><td class="after-val">Seconds — instant classification</td></tr>
+        <tr><td class="metric-name">Time to root cause</td><td class="today-val">30–90 min of manual log/query digging</td><td class="after-val">Seconds to low minutes — grounded diagnosis</td></tr>
+        <tr><td class="metric-name">Incidents needing zero human touch</td><td class="today-val">~0%</td><td class="after-val">~55–60% (8 of 14 categories, Autonomous)</td></tr>
+        <tr><td class="metric-name">Incidents reduced to one approval click</td><td class="today-val">~0%</td><td class="after-val">~35% (5 of 14 categories, AI-Assisted)</td></tr>
+        <tr><td class="metric-name">On-call hours per incident</td><td class="today-val">1–3 hours end-to-end</td><td class="after-val">Minutes, or one click + review</td></tr>
+        <tr><td class="metric-name">Mean Time to Resolution (MTTR)</td><td class="today-val">Hours, dependent on engineer availability</td><td class="after-val">Minutes for ~90% of categories</td></tr>
+        <tr><td class="metric-name">Silent corruption dwell time</td><td class="today-val">Days to weeks until someone notices</td><td class="after-val">Detected same-run via baseline comparison</td></tr>
+        <tr><td class="metric-name">Audit trail</td><td class="today-val">Manual, inconsistent — Slack threads, tribal knowledge</td><td class="after-val">100% of incidents produce a GitHub Issue + resolution log</td></tr>
+      </tbody>
+    </table>
+    <p class="metrics-note"><b>Note:</b> figures above are modeled/targeted impact based on the framework's automation design (14 categories, 8/5/1 tier split), not audited results from a live production deployment. Validate or replace with client-specific benchmarks before presenting as committed numbers.</p>
+  </section>
+
+  <footer>
+    <p class="thesis">The only manual step left is the one that <span>should</span> be.</p>
+    <p class="brand">FLOWSENTINEL AI<br>DE ON-CALL FRAMEWORK · LATENTVIEW ANALYTICS</p>
+  </footer>
+
+</div>
