@@ -314,6 +314,10 @@ class NewTicketRequest(BaseModel):
     message: str = ""
 
 
+class GuidanceRequest(BaseModel):
+    note: str = ""
+
+
 @app.get("/api/failure-catalog")
 def failure_catalog():
     return {"failures": [
@@ -430,6 +434,31 @@ def start_analysis(ticket_id: str, live: bool = Depends(is_live_mode)):
 def approve_ticket(ticket_id: str, live: bool = Depends(is_live_mode)):
     ticket = _get_ticket_or_404(ticket_id)
     ticket_engine.approve_ticket(ticket, live=live)
+    return ticket.to_dict()
+
+
+@app.post("/api/tickets/{ticket_id}/guidance", dependencies=[Depends(require_admin_if_live)])
+def add_ticket_guidance(ticket_id: str, req: GuidanceRequest):
+    """Lets the on-call engineer add context before or after an AI-Assisted
+    ticket is analyzed -- every agent prompt reads it back automatically."""
+    ticket = _get_ticket_or_404(ticket_id)
+    ticket_engine.add_guidance(ticket, req.note)
+    return ticket.to_dict()
+
+
+@app.post("/api/tickets/{ticket_id}/request-changes", dependencies=[Depends(require_admin_if_live)])
+def request_ticket_changes(ticket_id: str, req: GuidanceRequest, live: bool = Depends(is_live_mode)):
+    """The AI-Assisted queue's 'send it back' action -- attaches feedback and
+    re-runs the recommendation instead of a blind Approve."""
+    ticket = _get_ticket_or_404(ticket_id)
+    ticket_engine.request_changes(ticket, req.note, live=live)
+    return ticket.to_dict()
+
+
+@app.post("/api/tickets/{ticket_id}/rollback", dependencies=[Depends(require_admin_if_live)])
+def rollback_ticket(ticket_id: str, live: bool = Depends(is_live_mode)):
+    ticket = _get_ticket_or_404(ticket_id)
+    ticket_engine.rollback_ticket(ticket, live=live)
     return ticket.to_dict()
 
 

@@ -7,9 +7,15 @@ ai_agents.py. This file knows nothing about Gemini or any specific failure
 category's remediation logic -- it only knows the lifecycle every ticket
 moves through and which agent hook to call at each stage:
 
-  new -----classify----> queued_autonomous ----start_fix----> resolved
-                      \-> queued_assisted  ----start_analysis-> awaiting_approval --approve--> resolved
+  new -----classify----> queued_autonomous ----start_fix----> resolved ---rollback---> rolled_back
+                      \-> queued_assisted  ----start_analysis-> awaiting_approval --approve--> resolved ---rollback---> rolled_back
+                      \                                                  ^      |
+                      \                                                  '--request_changes
                       \-> advisory (terminal, no action -- by design)
+
+Rollback is only offered where a category defines a real rollback_fn (see
+ai_agents.py) -- most autonomous fixes (a retry, a killed query) have
+nothing meaningful to undo, so those tickets have no rollback path.
 
 TicketStore is in-memory for the demo. Each ticket also gets best-effort
 mirrored to a real GitHub Issue when a token is available (main.py's job),
@@ -48,6 +54,7 @@ class Ticket:
     confidence: Optional[float] = None
     status: str = "new"
     log: list = field(default_factory=list)
+    guidance: list = field(default_factory=list)
     github_issue_url: Optional[str] = None
     github_issue_number: Optional[int] = None
     source: str = "manual"  # "manual" (Demo Mode injection) or "github" (Production Mode sync)
@@ -61,8 +68,9 @@ class Ticket:
             "category_label": failure.label if failure else None,
             "category_group": failure.category if failure else None,
             "automation_level": self.automation_level, "confidence": self.confidence,
-            "status": self.status, "log": self.log, "source": self.source,
+            "status": self.status, "log": self.log, "guidance": self.guidance, "source": self.source,
             "github_issue_url": self.github_issue_url, "created_at": self.created_at,
+            "rollback_available": self.status == RESOLVED and bool(failure and failure.rollback_fn),
         }
 
 
@@ -101,6 +109,7 @@ AWAITING_APPROVAL = "awaiting_approval"
 RESOLVED = "resolved"
 ADVISORY_STATUS = "advisory"
 NEEDS_ATTENTION = "needs_attention"
+ROLLED_BACK = "rolled_back"
 
 
 def classify_ticket(ticket: Ticket, live: bool = True) -> Ticket:
@@ -176,5 +185,52 @@ def approve_ticket(ticket: Ticket, live: bool = True) -> Ticket:
         ticket.status = RESOLVED
     except Exception as exc:  # noqa: BLE001
         ticket.log.append(f"⚠️ Apply step hit an error: {exc}")
+        ticket.status = NEEDS_ATTENTION
+    return ticket
+
+
+def add_guidance(ticket: Ticket, note: str) -> Ticket:
+    """Lets the on-call engineer steer an AI-Assisted ticket before or after
+    it's analyzed. Every recommend_fn call reads ticket.guidance through the
+    shared ai_agents._prompt() helper, so this note actually changes what the
+    agent says next -- it isn't just a comment nobody reads."""
+    note = (note or "").strip()
+    if not note or ticket.status in (RESOLVED, ROLLED_BACK):
+        return ticket
+    ticket.guidance.append(note)
+    ticket.log.append(f"👤 [Guidance] {note}")
+    return ticket
+
+
+def request_changes(ticket: Ticket, note: str, live: bool = True) -> Ticket:
+    """The AI-Assisted queue's feedback loop: instead of a blind Approve, the
+    engineer can send the recommendation back with guidance and get a revised
+    one. Re-runs the same recommend_fn, now with the note folded into its
+    prompt via ticket.guidance, rather than inventing a separate revision
+    mechanism."""
+    if ticket.status != AWAITING_APPROVAL:
+        return ticket
+    add_guidance(ticket, note)
+    ticket.log.append("🔁 [Human] Requested changes -- re-running analysis with the new guidance.")
+    ticket.status = QUEUED_ASSISTED
+    return start_assisted_analysis(ticket, live=live)
+
+
+def rollback_ticket(ticket: Ticket, live: bool = True) -> Ticket:
+    """Reverts an already-resolved ticket, where the category defines a real
+    rollback path. Not offered for categories where the underlying action (a
+    retry, a killed query) has nothing meaningful to undo -- see rollback_fn
+    on FailureType in ai_agents.py."""
+    failure = CATALOG_BY_KEY.get(ticket.category)
+    if not failure or not failure.rollback_fn or ticket.status != RESOLVED:
+        return ticket
+    mode_tag = "" if live else " (Demo Mode -- no real GCP/GitHub/Gemini calls made)"
+    try:
+        output = failure.rollback_fn(ticket, live)
+        ticket.log.append("↩️ [Human] Requested rollback.")
+        ticket.log.append(output + mode_tag)
+        ticket.status = ROLLED_BACK
+    except Exception as exc:  # noqa: BLE001
+        ticket.log.append(f"⚠️ Rollback hit an error, needs a human look: {exc}")
         ticket.status = NEEDS_ATTENTION
     return ticket

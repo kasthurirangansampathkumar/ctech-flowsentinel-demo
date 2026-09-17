@@ -92,12 +92,17 @@ def call_gemini(prompt: str, live: bool = True) -> Optional[str]:
 def _prompt(agent_name: str, role: str, task: str, ticket: "object", extra_context: str = "") -> str:
     pipeline = ticket.inputs.get("pipeline") or "unknown pipeline"
     table = ticket.inputs.get("table") or "n/a"
+    guidance = getattr(ticket, "guidance", None)
+    guidance_block = (
+        "\nHuman guidance so far -- follow this, it overrides your default judgment:\n"
+        + "\n".join(f"- {note}" for note in guidance) + "\n"
+    ) if guidance else ""
     return (
         f"You are the {agent_name}, one module of SentinelView AI, an autonomous data-engineering "
         f"on-call framework.\nRole: {role}\n\n"
         f"Incident ticket:\nTitle: {ticket.title}\nDescription: {ticket.description}\n"
         f"Pipeline: {pipeline}  Table: {table}\n"
-        f"{extra_context}\n\nTask: {task}\n"
+        f"{extra_context}{guidance_block}\n\nTask: {task}\n"
         "Respond in 3-5 short plain-text lines, no markdown, no headers, no preamble. Be specific and "
         "concrete -- use realistic numbers/timings consistent with the incident. Do not mention that "
         "you are a language model."
@@ -138,6 +143,21 @@ def delayed_missing_data_agent(ticket, live: bool = True) -> str:
         "Monitors vendor file/stream arrival against SLA deadlines and pauses downstream DAGs on breach.",
         "Given the real feed-check output below, write the final incident resolution note for the ticket log.",
         ticket, extra_context=f"Real feed-check output just ran:\n{signal.strip()[-800:]}",
+    )
+    ai_text = call_gemini(prompt, live=live)
+    return _finish("Source Feed Sentinel Agent", ai_text, signal)
+
+
+def delayed_missing_data_rollback_agent(ticket, live: bool = True) -> str:
+    """Undoes the resolution above: real script (resume_pipeline.py) puts the
+    downstream DAG back in the state it was in before the fix resumed it."""
+    signal = run_agent_script(DEMOS_DIR / "demo_4_source_feed_sentinel" / "resume_pipeline.py", live=live)
+    prompt = _prompt(
+        "Source Feed Sentinel Agent",
+        "Monitors vendor file/stream arrival against SLA deadlines and pauses downstream DAGs on breach.",
+        "The on-call engineer requested a rollback of this incident's resolution. Given the real script "
+        "output below, write a short rollback confirmation for the ticket log.",
+        ticket, extra_context=f"Real rollback script output just ran:\n{signal.strip()[-800:]}",
     )
     ai_text = call_gemini(prompt, live=live)
     return _finish("Source Feed Sentinel Agent", ai_text, signal)
@@ -289,6 +309,28 @@ def schema_drift_apply_agent(ticket, live: bool = True) -> str:
     return run_agent_script(DEMOS_DIR / "demo_2_code_patch_and_approval" / "approve_pr_trigger.py", live=live)
 
 
+def schema_drift_rollback_agent(ticket, live: bool = True) -> str:
+    """Narrates reverting the merged schema-adapter PR. Not yet grounded in a
+    real git revert -- the merge trigger above doesn't track the actual PR
+    number/commit SHA per ticket, only a fixed demo PR. Phase 2 would store
+    that SHA on apply and call GitHub's revert-commit API here for real."""
+    prompt = _prompt(
+        "Schema Drift Repair Agent",
+        "Diagnoses upstream schema drift (renamed/retyped columns) and drafts a BigQuery SQL adapter.",
+        "The on-call engineer requested a rollback of the schema adapter fix that was already approved and "
+        "merged. Narrate reverting that merge (a revert PR against the same repo) and confirm the original "
+        "column mismatch is back in its pre-fix state for further investigation.",
+        ticket,
+    )
+    ai_text = call_gemini(prompt, live=live)
+    fallback = (
+        "Revert PR opened against the schema adapter merge and auto-approved (same trust level as the "
+        "original fix). The staging model is back to reading the raw upstream columns unmapped -- re-open "
+        "this ticket's category if the drift is still happening."
+    )
+    return _finish("Schema Drift Repair Agent", ai_text, fallback)
+
+
 def resource_exhaustion_recommend_agent(ticket, live: bool = True) -> str:
     prompt = _prompt(
         "Compute Doctor Agent",
@@ -365,6 +407,28 @@ def backfill_recommend_agent(ticket, live: bool = True) -> str:
 
 def backfill_apply_agent(ticket, live: bool = True) -> str:
     return run_agent_script(DEMOS_DIR / "demo_3_blast_radius_backfill" / "execute_backfill.py", live=live)
+
+
+def backfill_rollback_agent(ticket, live: bool = True) -> str:
+    """Narrates deleting the partitions the backfill above wrote. Not yet
+    grounded in a real BigQuery delete -- execute_backfill.py doesn't track
+    which exact partitions it touched per ticket. Phase 2 would log that
+    partition list on apply and issue a real DELETE/DROP PARTITION here."""
+    prompt = _prompt(
+        "Backfill Planning Agent",
+        "Summarizes a computed blast-radius plan for an on-call engineer's approval.",
+        "The on-call engineer requested a rollback of the backfill that was already approved and run. "
+        "Narrate deleting the backfilled partitions from the affected downstream tables and confirm they're "
+        "back to their pre-backfill state.",
+        ticket,
+    )
+    ai_text = call_gemini(prompt, live=live)
+    fallback = (
+        "Backfilled partitions dropped from every affected downstream table; row counts back to their "
+        "pre-backfill baseline. If the underlying trigger (code change or late data) is still active, the "
+        "same gap will reopen -- re-run the backfill once that's fixed."
+    )
+    return _finish("Backfill Planning Agent", ai_text, fallback)
 
 
 # ---------------------------------------------------------------------------
@@ -485,17 +549,19 @@ class FailureType:
     fix_fn: Optional[Callable] = None
     recommend_fn: Optional[Callable] = None
     apply_fn: Optional[Callable] = None
+    rollback_fn: Optional[Callable] = None
 
 
 FAILURE_CATALOG = [
     FailureType("schema_drift", "Unannounced schema change", "Upstream Data & Vendor", ASSISTED,
                 ["schema", "column", "renamed", "dropped", "cust_id", "customer_identifier"],
                 "Vendor CSV renamed 'cust_id' to 'customer_identifier_v2' and amount_usd now arrives as a currency string.",
-                recommend_fn=schema_drift_recommend_agent, apply_fn=schema_drift_apply_agent),
+                recommend_fn=schema_drift_recommend_agent, apply_fn=schema_drift_apply_agent,
+                rollback_fn=schema_drift_rollback_agent),
     FailureType("delayed_missing_data", "Delayed or missing data source", "Upstream Data & Vendor", AUTONOMOUS,
                 ["delayed", "missing file", "sftp", "s3", "kafka", "stalled", "late feed"],
                 "Vendor CRM file 'customer_profiles_2026-09-08.json' has not landed past its 08:00 UTC SLA.",
-                fix_fn=delayed_missing_data_agent),
+                fix_fn=delayed_missing_data_agent, rollback_fn=delayed_missing_data_rollback_agent),
     FailureType("api_failure", "Third-party API failure", "Upstream Data & Vendor", AUTONOMOUS,
                 ["api", "rate limit", "429", "expired key", "timeout", "endpoint down"],
                 "Vendor pricing API returning HTTP 429 rate-limit errors on the hourly ingestion job.",
@@ -523,7 +589,8 @@ FAILURE_CATALOG = [
     FailureType("late_arriving_records", "Late-arriving / out-of-order records", "Data Quality & Integrity", ASSISTED,
                 ["late-arriving", "out of order", "backfill", "watermark", "reprocess"],
                 "Events for 2026-09-01 through 2026-09-07 arrived after their partitions had already aggregated.",
-                recommend_fn=backfill_recommend_agent, apply_fn=backfill_apply_agent),
+                recommend_fn=backfill_recommend_agent, apply_fn=backfill_apply_agent,
+                rollback_fn=backfill_rollback_agent),
     FailureType("connection_pool", "Connection pool exhaustion", "Infrastructure & Security", AUTONOMOUS,
                 ["connection pool", "pool exhausted", "connection dropped", "max connections"],
                 "Postgres connection pool at 98% utilization during peak nightly load.",
@@ -542,7 +609,8 @@ FAILURE_CATALOG = [
     FailureType("urgent_backfill", "Urgent backfill request", "SLA & Escalations", ASSISTED,
                 ["backfill request", "broken metric", "downstream team reported", "historical rerun"],
                 "Finance reports the daily revenue metric has been wrong since Monday -- needs a backfill.",
-                recommend_fn=backfill_recommend_agent, apply_fn=backfill_apply_agent),
+                recommend_fn=backfill_recommend_agent, apply_fn=backfill_apply_agent,
+                rollback_fn=backfill_rollback_agent),
 ]
 
 CATALOG_BY_KEY = {f.key: f for f in FAILURE_CATALOG}
@@ -622,6 +690,17 @@ AGENT_SPECS = [
         decision_task="Write the final incident-resolution note given the real feed-check result.",
         output="A resolution note appended to the ticket log; ticket auto-resolves.",
         fallback="The raw feed-check script output is used verbatim as the ticket log entry.",
+    ),
+    AgentSpec(
+        key="delayed_missing_data_rollback", name="Source Feed Sentinel Agent (Rollback)", stage="Rollback",
+        purpose="Undoes this category's resolution on request -- puts the downstream DAG back the way it "
+                "was before the fix resumed it, for a resolved ticket that turned out to be premature.",
+        inputs=["The resolved ticket", "Real resume-pipeline script output (resume_pipeline.py)"],
+        grounding_data="The same real script family as the fix agent, run in reverse (resume_pipeline.py) "
+                       "-- Gemini narrates the real script's output, it does not decide the DAG state itself.",
+        decision_task="Write a rollback confirmation given the real script output.",
+        output="A rollback note appended to the ticket log; ticket moves to Rolled Back.",
+        fallback="The raw rollback-script output is used verbatim as the ticket log entry.",
     ),
     AgentSpec(
         key="api_failure", name="API Health Agent", stage="Autonomous Fix",
@@ -704,6 +783,19 @@ AGENT_SPECS = [
         fallback="The known-good COALESCE/SAFE_CAST adapter pattern for this exact incident.",
     ),
     AgentSpec(
+        key="schema_drift_rollback", name="Schema Drift Repair Agent (Rollback)", stage="Rollback",
+        purpose="Reverts an already-approved-and-merged schema adapter fix, for when the fix itself turns "
+                "out to be wrong or the drift comes back in a different shape.",
+        inputs=["The resolved ticket and its applied fix"],
+        grounding_data="None yet -- narrated only. The merge trigger this pairs with doesn't track the real "
+                       "PR number/commit SHA per ticket, only a fixed demo PR, so there's nothing real to "
+                       "revert against yet. Phase 2 would store that SHA on apply and call GitHub's "
+                       "revert-commit API here for real.",
+        decision_task="Narrate reverting the merged PR and confirm the pre-fix state.",
+        output="A rollback note appended to the ticket log; ticket moves to Rolled Back.",
+        fallback="A fixed revert-PR narrative.",
+    ),
+    AgentSpec(
         key="resource_exhaustion", name="Compute Doctor Agent", stage="AI-Assisted Recommendation",
         purpose="Diagnoses Spark/Trino/Ray OOM and data-skew failures and recommends a repartition key and "
                 "memory setting -- gated behind approval since it changes cluster spend.",
@@ -736,6 +828,19 @@ AGENT_SPECS = [
         decision_task="Summarize the real plan and recommend approval, citing the exact numbers given.",
         output="A recommendation posted to the ticket log; ticket moves to Awaiting Approval.",
         fallback="The formatted real plan output, without Gemini's narration layer.",
+    ),
+    AgentSpec(
+        key="backfill_rollback", name="Backfill Planning Agent (Rollback)", stage="Rollback",
+        purpose="Reverts an already-approved-and-run backfill -- shared by both the late-arriving-records "
+                "and urgent-backfill-request categories -- for when the backfill turns out to be wrong or "
+                "premature.",
+        inputs=["The resolved ticket and its applied backfill"],
+        grounding_data="None yet -- narrated only. execute_backfill.py doesn't track which exact partitions "
+                       "it touched per ticket, so there's nothing real to delete against yet. Phase 2 would "
+                       "log that partition list on apply and issue a real DELETE/DROP PARTITION here.",
+        decision_task="Narrate deleting the backfilled partitions and confirm the pre-backfill state.",
+        output="A rollback note appended to the ticket log; ticket moves to Rolled Back.",
+        fallback="A fixed partition-delete narrative.",
     ),
     AgentSpec(
         key="ops_readout_agent", name="Ops Read-Out Agent", stage="Summary",

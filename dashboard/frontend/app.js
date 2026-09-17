@@ -70,10 +70,10 @@ function levelColor(level) {
   return { autonomous: "green", assisted: "amber", advisory: "grey" }[level] || "grey";
 }
 function statusColor(status) {
-  return { resolved: "green", working: "amber", awaiting_approval: "amber", advisory: "grey", needs_attention: "red", new: "grey" }[status] || "grey";
+  return { resolved: "green", working: "amber", awaiting_approval: "amber", advisory: "grey", needs_attention: "red", new: "grey", rolled_back: "grey" }[status] || "grey";
 }
 function statusLabel(status) {
-  return { resolved: "Resolved", working: "Working…", awaiting_approval: "Awaiting Approval", advisory: "Advisory", needs_attention: "Needs Attention", new: "New" }[status] || status;
+  return { resolved: "Resolved", working: "Working…", awaiting_approval: "Awaiting Approval", advisory: "Advisory", needs_attention: "Needs Attention", new: "New", rolled_back: "Rolled Back" }[status] || status;
 }
 
 /* ---------------- Tabs ---------------- */
@@ -295,6 +295,30 @@ async function approveTicket(id, btn) {
   await refreshTickets();
 }
 
+async function addGuidance(id, btn) {
+  const note = window.prompt("Guidance for the agent (e.g. a constraint, a correction, extra context):");
+  if (!note) return;
+  btn.disabled = true;
+  await adminPost(`/api/tickets/${id}/guidance`, { note });
+  btn.disabled = false;
+  await refreshTickets();
+}
+
+async function requestChanges(id, btn) {
+  const note = window.prompt("What should the agent do differently? This re-runs the analysis with your note.");
+  if (!note) return;
+  btn.disabled = true; btn.textContent = "Re-analyzing…";
+  await adminPost(`/api/tickets/${id}/request-changes`, { note });
+  await refreshTickets();
+}
+
+async function rollbackTicket(id, btn) {
+  if (!window.confirm("Roll back this ticket's fix? This reverts the applied change.")) return;
+  btn.disabled = true; btn.textContent = "Rolling back…";
+  await adminPost(`/api/tickets/${id}/rollback`);
+  await refreshTickets();
+}
+
 function ticketAction(t) {
   switch (t.status) {
     case "new":
@@ -302,11 +326,17 @@ function ticketAction(t) {
     case "queued_autonomous":
       return `<button class="btn" onclick="startFix('${t.id}', this)">Start Fix</button>`;
     case "queued_assisted":
-      return `<button class="btn" onclick="startAnalysis('${t.id}', this)">Start Analysis</button>`;
+      return `<button class="btn" onclick="startAnalysis('${t.id}', this)">Start Analysis</button>`
+           + `<button class="btn ghost" onclick="addGuidance('${t.id}', this)">💬 Add Guidance</button>`;
     case "awaiting_approval":
-      return `<button class="btn" onclick="approveTicket('${t.id}', this)">Approve &amp; Apply Fix</button>`;
+      return `<button class="btn" onclick="approveTicket('${t.id}', this)">Approve &amp; Apply Fix</button>`
+           + `<button class="btn ghost" onclick="requestChanges('${t.id}', this)">✏️ Request Changes</button>`;
     case "needs_attention":
       return `<span style="font-size:12px;color:var(--red)">Needs a human look</span>`;
+    case "resolved":
+      return t.rollback_available
+        ? `<button class="btn ghost" onclick="rollbackTicket('${t.id}', this)">↩️ Rollback</button>`
+        : "";
     default:
       return "";
   }
@@ -336,7 +366,7 @@ function renderTicket(t) {
 const BUCKETS = {
   new: "col-new", queued_autonomous: "col-autonomous", queued_assisted: "col-assisted",
   awaiting_approval: "col-assisted", advisory: "col-advisory",
-  resolved: "col-resolved", needs_attention: "col-resolved",
+  resolved: "col-resolved", needs_attention: "col-resolved", rolled_back: "col-resolved",
 };
 const COUNTS = {
   "col-new": "count-new", "col-autonomous": "count-autonomous", "col-assisted": "count-assisted",
