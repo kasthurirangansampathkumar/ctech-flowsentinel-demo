@@ -1,5 +1,5 @@
 # ==============================================================================
-# FlowSentinel AI - Ops Dashboard Launcher (Windows PowerShell)
+# SentinelView AI - Ops Dashboard Launcher (Windows PowerShell)
 # Mirrors run_dashboard.sh -- same env vars, same behavior.
 # ==============================================================================
 $ErrorActionPreference = "Stop"
@@ -29,6 +29,6 @@ if (-not $env:GCS_LANDING_BUCKET)  { $env:GCS_LANDING_BUCKET = "$($env:GCP_PROJE
 # $env:DASHBOARD_ADMIN_KEY before running this script.
 if (-not $env:DASHBOARD_ADMIN_KEY) { $env:DASHBOARD_ADMIN_KEY = "test123" }
 
-Write-Host "Starting FlowSentinel AI Ops Dashboard on http://localhost:3000"
+Write-Host "Starting SentinelView AI Ops Dashboard on http://localhost:3000"
 Set-Location backend
 & "..\.venv\Scripts\uvicorn.exe" main:app --host 0.0.0.0 --port 3000

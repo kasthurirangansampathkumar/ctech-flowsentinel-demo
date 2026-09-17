@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FlowSentinel AI - Ops Dashboard Backend (FastAPI)
+SentinelView AI - Ops Dashboard Backend (FastAPI)
 Human-in-the-Loop control plane: read-only status views + the 1-click
 approval / trigger actions that are the only human touchpoints in the
 framework. Everything else (detection, RCA, patching, ticketing) is
@@ -46,7 +46,7 @@ REGION = os.getenv("GCP_REGION", "us-central1")
 # public demo dashboard. Leave ADMIN_KEY unset to disable the gate (e.g. local dev).
 ADMIN_KEY = os.getenv("DASHBOARD_ADMIN_KEY", "")
 
-app = FastAPI(title="FlowSentinel AI Ops Dashboard")
+app = FastAPI(title="SentinelView AI Ops Dashboard")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )

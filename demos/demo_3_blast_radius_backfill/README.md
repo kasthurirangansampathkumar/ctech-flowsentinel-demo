@@ -1,12 +1,12 @@
 # Demo 3: Code-Change Driven Precision Backfill Engine
 
 **Prepared by:** CTech Data Engineers  
-**Framework:** FlowSentinel AI  
+**Framework:** SentinelView AI  
 
 ---
 
 ## 🎯 Demo Goal
-Demonstrate how FlowSentinel AI automatically parses Airflow/Dataform lineage graphs following a code change, maps affected historical partition dates, estimates BigQuery compute slot costs ($1.20), and executes safe, quota-controlled partition backfills without risking GCP quota limits or corrupting live analytics tables.
+Demonstrate how SentinelView AI automatically parses Airflow/Dataform lineage graphs following a code change, maps affected historical partition dates, estimates BigQuery compute slot costs ($1.20), and executes safe, quota-controlled partition backfills without risking GCP quota limits or corrupting live analytics tables.
 
 ---
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-FlowSentinel AI - Agent Framework
+SentinelView AI - Agent Framework
 ==================================
-This is the reusable piece: every AI agent FlowSentinel runs, independent of
+This is the reusable piece: every AI agent SentinelView runs, independent of
 the ticket board or dashboard wired on top of it. A client replicating this
 framework only needs this file plus the demo scripts it calls into.
 
@@ -93,7 +93,7 @@ def _prompt(agent_name: str, role: str, task: str, ticket: "object", extra_conte
     pipeline = ticket.inputs.get("pipeline") or "unknown pipeline"
     table = ticket.inputs.get("table") or "n/a"
     return (
-        f"You are the {agent_name}, one module of FlowSentinel AI, an autonomous data-engineering "
+        f"You are the {agent_name}, one module of SentinelView AI, an autonomous data-engineering "
         f"on-call framework.\nRole: {role}\n\n"
         f"Incident ticket:\nTitle: {ticket.title}\nDescription: {ticket.description}\n"
         f"Pipeline: {pipeline}  Table: {table}\n"
@@ -418,7 +418,7 @@ def ops_readout_agent(pipeline_data: dict, table_data: dict, ticket_stats: dict,
     )
 
     prompt = (
-        "You are the Ops Read-Out Agent for FlowSentinel AI, an autonomous data-engineering on-call framework. "
+        "You are the Ops Read-Out Agent for SentinelView AI, an autonomous data-engineering on-call framework. "
         "Given these real, current numbers from the Summary dashboard and Ticket Board:\n\n"
         f"{facts}\n\n"
         "Write a 2-3 sentence executive read-out for the on-call engineer covering: (1) overall status, "

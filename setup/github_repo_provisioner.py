@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FlowSentinel AI - GitHub Repository & Secret Provisioner
+SentinelView AI - GitHub Repository & Secret Provisioner
 Prepared by: CTech Data Engineers
 """
 import os
@@ -27,7 +27,7 @@ def create_github_repo():
     url = "https://api.github.com/user/repos"
     payload = {
         "name": GITHUB_REPO,
-        "description": "FlowSentinel AI - Autonomous Data Engineering On-Call & Resilience Framework",
+        "description": "SentinelView AI - Autonomous Data Engineering On-Call & Resilience Framework",
         "private": False,
         "auto_init": False
     }
@@ -63,7 +63,7 @@ def create_github_repo():
             sys.exit(1)
 
 def push_code_to_github(owner, clone_url):
-    print("📌 Pushing local FlowSentinel AI code to GitHub repository...")
+    print("📌 Pushing local SentinelView AI code to GitHub repository...")
     base_dir = "/Users/kasthurirangansampathkumar/Documents/DE Oncall Demo"
 
     # Clean remote URL with NO token embedded (never persisted to .git/config).
@@ -74,7 +74,7 @@ def push_code_to_github(owner, clone_url):
         ["git", "config", "user.name", "CTech Data Engineers"],
         ["git", "config", "user.email", "de-oncall@ctech.com"],
         ["git", "add", "."],
-        ["git", "commit", "-m", "Initial FlowSentinel AI Framework setup"],
+        ["git", "commit", "-m", "Initial SentinelView AI Framework setup"],
         ["git", "branch", "-M", "main"],
         ["git", "remote", "remove", "origin"],
         ["git", "remote", "add", "origin", clean_remote],

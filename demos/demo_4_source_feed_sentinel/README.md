@@ -1,12 +1,12 @@
 # Demo 4: Upstream Source Feed Sentinel & SLA Guardrail
 
 **Prepared by:** CTech Data Engineers  
-**Framework:** FlowSentinel AI  
+**Framework:** SentinelView AI  
 
 ---
 
 ## 🎯 Demo Goal
-Demonstrate how FlowSentinel AI continuously monitors incoming 3rd-party vendor file arrival windows in GCS/SFTP. When a vendor file is delayed past its 8:00 AM SLA window, the **Source Feed Sentinel** automatically pauses downstream Cloud Composer / Airflow DAGs to prevent partial data loading, dispatches a vendor alert, and automatically unpauses and executes the pipeline the instant the file lands.
+Demonstrate how SentinelView AI continuously monitors incoming 3rd-party vendor file arrival windows in GCS/SFTP. When a vendor file is delayed past its 8:00 AM SLA window, the **Source Feed Sentinel** automatically pauses downstream Cloud Composer / Airflow DAGs to prevent partial data loading, dispatches a vendor alert, and automatically unpauses and executes the pipeline the instant the file lands.
 
 ---
 

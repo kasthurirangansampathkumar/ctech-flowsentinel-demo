@@ -1,6 +1,6 @@
-# FlowSentinel AI — Teammate Replication Guide (Windows)
+# SentinelView AI — Teammate Replication Guide (Windows)
 
-This walks a teammate through running the FlowSentinel AI Ops Dashboard on their own
+This walks a teammate through running the SentinelView AI Ops Dashboard on their own
 Windows machine, then lists what's left to take it from "runs on my laptop" to a
 production Cloud Run deployment.
 

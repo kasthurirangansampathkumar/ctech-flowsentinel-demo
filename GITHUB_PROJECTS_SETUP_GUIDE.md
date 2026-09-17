@@ -1,4 +1,4 @@
-# GitHub Projects v2 Setup Guide: FlowSentinel AI Incident Command Board
+# GitHub Projects v2 Setup Guide: SentinelView AI Incident Command Board
 
 **Prepared by:** CTech Data Engineers  
 **Target Audience:** GitHub Organization Admins & Data Engineering Leads  
@@ -7,7 +7,7 @@
 
 ## 📌 Overview
 
-**GitHub Projects (v2)** serves as the **100% Free, Code-Native Incident Command & Backfill Board** for FlowSentinel AI. It visualizes the entire incident lifecycle in real time—moving items from **🔴 Incident Triaged** to **🟢 Resolved & Closed** without requiring paid external ticketing SaaS like Jira.
+**GitHub Projects (v2)** serves as the **100% Free, Code-Native Incident Command & Backfill Board** for SentinelView AI. It visualizes the entire incident lifecycle in real time—moving items from **🔴 Incident Triaged** to **🟢 Resolved & Closed** without requiring paid external ticketing SaaS like Jira.
 
 ---
 
@@ -28,7 +28,7 @@
 2. Click the green **`New project`** button.
 3. Select **`Board`** layout template and click **`Create`**.
 4. Rename the Project Title:
-   **`FlowSentinel AI - Incident & Backfill Command Board`**
+   **`SentinelView AI - Incident & Backfill Command Board`**
 
 ---
 

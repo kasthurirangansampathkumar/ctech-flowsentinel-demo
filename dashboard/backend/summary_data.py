@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FlowSentinel AI - Summary view data
+SentinelView AI - Summary view data
 ====================================
 Pipeline run-health and table-freshness data for the Summary tab.
 

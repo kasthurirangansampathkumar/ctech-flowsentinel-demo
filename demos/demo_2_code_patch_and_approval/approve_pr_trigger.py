@@ -18,7 +18,7 @@ import ssl
 import certifi
 
 def simulate_dashboard_approval():
-    print("🎛️ [FlowSentinel HITL Dashboard] Receiving 1-Click Human Approval...")
+    print("🎛️ [SentinelView HITL Dashboard] Receiving 1-Click Human Approval...")
     print("👤 User Action: Lead On-Call Engineer clicked [Approve PR & Auto-Merge]")
     print(f"📌 Target Pull Request: #{PR_NUMBER} on repo '{GITHUB_OWNER}/{GITHUB_REPO}'")
     time.sleep(1)

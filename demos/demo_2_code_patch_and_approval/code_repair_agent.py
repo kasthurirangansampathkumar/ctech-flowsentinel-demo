@@ -51,7 +51,7 @@ def create_github_pr(fixed_sql):
     print("🐙 [GitHub PR Generator] Creating branch 'fix/schema-drift-orders' and Pull Request...")
     
     pr_body = f"""## 🛠️ Autonomous Code Fix & Schema Adapter
-**Framework:** FlowSentinel AI | **Agent:** Code Repair Agent  
+**Framework:** SentinelView AI | **Agent:** Code Repair Agent  
 **Resolves Issue:** #42  
 
 ### 📝 Summary of Changes
@@ -63,7 +63,7 @@ def create_github_pr(fixed_sql):
 ```
 
 ### 🎛️ Human-in-the-Loop Action Required
-Click **`[Approve & Auto-Deploy]`** on the FlowSentinel Ops Dashboard to merge this PR and trigger historical backfills.
+Click **`[Approve & Auto-Deploy]`** on the SentinelView Ops Dashboard to merge this PR and trigger historical backfills.
 """
 
     if not GITHUB_PAT:

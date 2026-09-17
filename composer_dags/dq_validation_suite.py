@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- DQ Validation Suite.
+"""SentinelView AI -- DQ Validation Suite.
 
 Runs the data-quality checks the DQ Triage Agent's tickets refer to: null
 customer ids and duplicate order ids in the fact table. Logs a failed run

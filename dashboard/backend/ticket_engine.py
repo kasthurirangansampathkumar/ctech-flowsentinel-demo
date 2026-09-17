@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-FlowSentinel AI - Ticket Engine
+SentinelView AI - Ticket Engine
 ================================
 The ticket board's state machine, built on top of the AI agents defined in
 ai_agents.py. This file knows nothing about Gemini or any specific failure

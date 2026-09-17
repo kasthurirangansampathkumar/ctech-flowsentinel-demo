@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Customer 360 Aggregation.
+"""SentinelView AI -- Customer 360 Aggregation.
 
 Joins customer profiles with their order history into a single
 per-customer view, refreshed after the CRM sync and sales transformation.

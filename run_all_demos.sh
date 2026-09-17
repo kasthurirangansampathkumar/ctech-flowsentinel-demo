@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FlowSentinel AI - Master Demo Suite Launcher
+# SentinelView AI - Master Demo Suite Launcher
 # Prepared by: CTech Data Engineers
 # ==============================================================================
 set -e
@@ -8,7 +8,7 @@ set -e
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================================================"
-echo "🚀 FlowSentinel AI: Master Real-Time Demo Launcher Suite"
+echo "🚀 SentinelView AI: Master Real-Time Demo Launcher Suite"
 echo "Prepared by: CTech Data Engineers"
 echo "========================================================================"
 echo ""
@@ -68,5 +68,5 @@ esac
 
 echo ""
 echo "========================================================================"
-echo "🎉 FlowSentinel AI Real-Time Demo Suite Completed Successfully!"
+echo "🎉 SentinelView AI Real-Time Demo Suite Completed Successfully!"
 echo "========================================================================"

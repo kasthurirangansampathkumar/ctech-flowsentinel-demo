@@ -35,7 +35,7 @@ def generate_gemini_rca(log_payload):
     lineage = log_payload.get("jsonPayload", {}).get("lineage_node", "N/A")
 
     rca_markdown = f"""## 🔴 Incident Triage & Root Cause Analysis (RCA)
-**Framework:** FlowSentinel AI | **Agent:** Gemini 2.0 Triage Agent  
+**Framework:** SentinelView AI | **Agent:** Gemini 2.0 Triage Agent  
 
 ### 📌 Incident Overview
 - **Pipeline DAG:** `{dag_id}`
@@ -102,7 +102,7 @@ def create_github_issue(rca_markdown, log_payload):
         return "https://github.com/LatentView-Analytics-Ltd/ctech-flowsentinel-demo/issues/42 (Fallback)"
 
 def run_triage_agent():
-    print("🚀 [Demo 1] FlowSentinel Autonomous Triage Agent Started...")
+    print("🚀 [Demo 1] SentinelView Autonomous Triage Agent Started...")
     
     # Sample failure payload
     sample_payload = {

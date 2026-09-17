@@ -1,4 +1,4 @@
-<title>FlowSentinel Architecture</title>
+<title>SentinelView Architecture</title>
 <style>
   :root {
     --paper: #f5f7f8;
@@ -88,7 +88,7 @@
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">FlowSentinel AI — Reference Diagrams</p>
+    <p class="eyebrow">SentinelView AI — Reference Diagrams</p>
     <h1>How the pieces actually connect</h1>
     <p class="dek">Three diagrams, each drawn from the running code, not a proposal: how Gemini is actually called, how data moves through the GCP stack, and what a click on the Ticket Board actually does to a ticket's state.</p>
     <nav class="toc">
@@ -433,10 +433,10 @@
       <span><span class="sw" style="background:var(--amber)"></span>AI-Assisted path — one human approval</span>
       <span><span class="sw" style="background:var(--grey)"></span>Entry point / terminal state</span>
     </div>
-    <figcaption>This is the literal state machine in <code>ticket_engine.py</code> — every box is a real ticket <code>status</code> value, every arrow a real endpoint (<code>/classify</code>, <code>/start-fix</code>, <code>/start-analysis</code>, <code>/approve</code>). The Issue Segment Agent runs once per ticket and never re-runs; from there a ticket has exactly one path to Resolved, matching the automation level FlowSentinel's playbook assigned it.</figcaption>
+    <figcaption>This is the literal state machine in <code>ticket_engine.py</code> — every box is a real ticket <code>status</code> value, every arrow a real endpoint (<code>/classify</code>, <code>/start-fix</code>, <code>/start-analysis</code>, <code>/approve</code>). The Issue Segment Agent runs once per ticket and never re-runs; from there a ticket has exactly one path to Resolved, matching the automation level SentinelView's playbook assigned it.</figcaption>
   </figure>
 
   <footer>
-    Generated from the live FlowSentinel AI dashboard (<code>ctech-flowsentinel-ai</code>) — component names, state values, and endpoint paths match the running code, not a proposed design.
+    Generated from the live SentinelView AI dashboard (<code>ctech-flowsentinel-ai</code>) — component names, state values, and endpoint paths match the running code, not a proposed design.
   </footer>
 </div>

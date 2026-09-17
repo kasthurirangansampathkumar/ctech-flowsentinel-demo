@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Vendor CRM Sync.
+"""SentinelView AI -- Vendor CRM Sync.
 
 Loads the daily vendor customer-profile feed from the GCS landing zone into
 raw_staging.customer_profiles -- this is what the Source Feed Sentinel

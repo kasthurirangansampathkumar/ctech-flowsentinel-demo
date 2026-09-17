@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Vendor E-Commerce Ingest.
+"""SentinelView AI -- Vendor E-Commerce Ingest.
 
 Loads the hourly vendor orders CSV from the GCS landing zone into
 raw_staging.orders. This is the ingestion stage feeding the sales

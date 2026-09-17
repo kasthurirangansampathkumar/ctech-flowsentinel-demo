@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FlowSentinel AI - Ops Dashboard Launcher
+# SentinelView AI - Ops Dashboard Launcher
 # ==============================================================================
 set -eo pipefail
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,5 +27,5 @@ export GCS_LANDING_BUCKET="${GCS_LANDING_BUCKET:-${GCP_PROJECT_ID}-landing-zone}
 # DASHBOARD_ADMIN_KEY before running this script.
 export DASHBOARD_ADMIN_KEY="${DASHBOARD_ADMIN_KEY:-test123}"
 
-echo "🚀 Starting FlowSentinel AI Ops Dashboard on http://localhost:3000"
+echo "🚀 Starting SentinelView AI Ops Dashboard on http://localhost:3000"
 cd backend && ../.venv/bin/uvicorn main:app --host 0.0.0.0 --port 3000

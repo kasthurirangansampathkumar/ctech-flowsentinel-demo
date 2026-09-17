@@ -1,4 +1,4 @@
-# FlowSentinel AI Ops Dashboard -- built from the repo root so the container
+# SentinelView AI Ops Dashboard -- built from the repo root so the container
 # can see both dashboard/ and the demos/ agent scripts it shells out to.
 FROM python:3.12-slim
 

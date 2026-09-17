@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Inventory Sync Pipeline.
+"""SentinelView AI -- Inventory Sync Pipeline.
 
 Refreshes warehouse inventory levels from the raw snapshot table.
 """

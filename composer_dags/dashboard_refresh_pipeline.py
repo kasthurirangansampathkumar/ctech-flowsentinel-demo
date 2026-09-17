@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Dashboard Refresh Pipeline.
+"""SentinelView AI -- Dashboard Refresh Pipeline.
 
 Aggregates fact_orders into the daily sales rollup the executive dashboard
 reads -- this is the pipeline the Pace Predictor agent watches for a

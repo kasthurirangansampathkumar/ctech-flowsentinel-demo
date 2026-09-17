@@ -1,7 +1,7 @@
-# FlowSentinel AI — Pending Access Request
+# SentinelView AI — Pending Access Request
 
 **Requested by:** Kasthurirangan Sampathkumar (`kasthurirangan.sampathkumar@latentview.com`)
-**Project:** FlowSentinel AI — DE On-Call Automation Framework
+**Project:** SentinelView AI — DE On-Call Automation Framework
 **GCP Project:** `ctech-flowsentinel-ai`
 **GitHub Repo:** `LatentView-Analytics-Ltd/ctech-flowsentinel-demo`
 

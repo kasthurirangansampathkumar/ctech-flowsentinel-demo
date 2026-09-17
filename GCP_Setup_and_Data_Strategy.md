@@ -1,4 +1,4 @@
-# FlowSentinel AI: GCP Project Setup, GitHub Issues/Projects Provisioning & Data Strategy Guide
+# SentinelView AI: GCP Project Setup, GitHub Issues/Projects Provisioning & Data Strategy Guide
 
 **Prepared by:** CTech Data Engineers  
 **Target Audience:** System Administrators, GCP Cloud Admins, & GitHub Org Administrators  
@@ -10,7 +10,7 @@
 Please create a dedicated GCP project (e.g., `ctech-flowsentinel-demo-dev`) and enable the following 13 Google Cloud APIs:
 
 ### A. Core Orchestration & Compute APIs
-| API Name | Service Identifier | Purpose in FlowSentinel AI |
+| API Name | Service Identifier | Purpose in SentinelView AI |
 | :--- | :--- | :--- |
 | **Cloud Composer API** | `composer.googleapis.com` | Apache Airflow 3 pipeline execution & DAG orchestration |
 | **Cloud Run API** | `run.googleapis.com` | Hosting the interactive React/FastAPI Dashboard web app |
@@ -18,7 +18,7 @@ Please create a dedicated GCP project (e.g., `ctech-flowsentinel-demo-dev`) and 
 | **Artifact Registry API** | `artifactregistry.googleapis.com` | Storing Docker container images & Python packages |
 
 ### B. Data & Analytics Engine APIs
-| API Name | Service Identifier | Purpose in FlowSentinel AI |
+| API Name | Service Identifier | Purpose in SentinelView AI |
 | :--- | :--- | :--- |
 | **BigQuery API** | `bigquery.googleapis.com` | Enterprise Data Warehouse, staging, & analytical queries |
 | **BigQuery Storage API** | `bigquerystorage.googleapis.com` | High-performance streaming & reading for AI agents |
@@ -27,7 +27,7 @@ Please create a dedicated GCP project (e.g., `ctech-flowsentinel-demo-dev`) and 
 | **Cloud Pub/Sub API** | `pubsub.googleapis.com` | Real-time incident event broker & alert log streaming |
 
 ### C. AI, Observability & Secrets APIs
-| API Name | Service Identifier | Purpose in FlowSentinel AI |
+| API Name | Service Identifier | Purpose in SentinelView AI |
 | :--- | :--- | :--- |
 | **Vertex AI API** | `aiplatform.googleapis.com` | Model invocation (Gemini 2.0 Flash / Pro) for agentic RCA & code generation |
 | **Generative Language API** | `generativelanguage.googleapis.com` | Gemini API alternative endpoint for agent reasoning |
@@ -64,7 +64,7 @@ Please ask your GitHub Admin to unblock the following settings in your organizat
   ```
 
 ### C. GitHub Projects v2 Board Structure
-We will configure a GitHub Project Board (`FlowSentinel AI - Incident & Backfill Command Board`) with the following column workflow and custom fields:
+We will configure a GitHub Project Board (`SentinelView AI - Incident & Backfill Command Board`) with the following column workflow and custom fields:
 
 ```
 ┌────────────────────────┐  ┌────────────────────────┐  ┌────────────────────────┐  ┌────────────────────────┐

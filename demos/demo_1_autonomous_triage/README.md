@@ -1,12 +1,12 @@
 # Demo 1: Autonomous Incident Triage & RCA
 
 **Prepared by:** CTech Data Engineers  
-**Framework:** FlowSentinel AI  
+**Framework:** SentinelView AI  
 
 ---
 
 ## 🎯 Demo Goal
-Demonstrate how FlowSentinel AI automatically detects a pipeline failure in Cloud Composer / BigQuery, intercepts the stack trace via Cloud Logging & Pub/Sub, uses **Vertex AI Gemini 2.0** to perform Root Cause Analysis (RCA), and generates an enriched ticket in **GitHub Issues** within 5 seconds.
+Demonstrate how SentinelView AI automatically detects a pipeline failure in Cloud Composer / BigQuery, intercepts the stack trace via Cloud Logging & Pub/Sub, uses **Vertex AI Gemini 2.0** to perform Root Cause Analysis (RCA), and generates an enriched ticket in **GitHub Issues** within 5 seconds.
 
 ---
 

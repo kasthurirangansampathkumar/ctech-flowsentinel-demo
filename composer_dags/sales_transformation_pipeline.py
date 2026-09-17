@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Sales Transformation Pipeline.
+"""SentinelView AI -- Sales Transformation Pipeline.
 
 Stages raw orders and merges new rows into the fact table. This is the DAG
 every ticket-board demo scenario (schema drift, backfill) refers to.

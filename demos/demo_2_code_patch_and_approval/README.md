@@ -1,12 +1,12 @@
 # Demo 2: Autonomous Code Patch & 1-Click Approval
 
 **Prepared by:** CTech Data Engineers  
-**Framework:** FlowSentinel AI  
+**Framework:** SentinelView AI  
 
 ---
 
 ## 🎯 Demo Goal
-Demonstrate how FlowSentinel AI takes the Root Cause Analysis (RCA) from Demo 1, uses **Gemini 2.0** to generate an automated SQL schema patch, opens a Pull Request on GitHub, and presents a 1-click approval card on the **Human-in-the-Loop (HITL) Dashboard** to merge the fix and redeploy the Airflow DAG.
+Demonstrate how SentinelView AI takes the Root Cause Analysis (RCA) from Demo 1, uses **Gemini 2.0** to generate an automated SQL schema patch, opens a Pull Request on GitHub, and presents a 1-click approval card on the **Human-in-the-Loop (HITL) Dashboard** to merge the fix and redeploy the Airflow DAG.
 
 ---
 

@@ -1,4 +1,4 @@
-# FlowSentinel AI: Step-by-Step GCP Setup & Execution Guide
+# SentinelView AI: Step-by-Step GCP Setup & Execution Guide
 
 **Prepared by:** CTech Data Engineers  
 **Target Audience:** Data Engineers, Cloud Admins, & Demo Presenters  
@@ -12,7 +12,7 @@
 
 ### What Dashboard Tools Can You Use?
 
-| Dashboard Option | Setup Difficulty | Best For | Included in FlowSentinel AI? |
+| Dashboard Option | Setup Difficulty | Best For | Included in SentinelView AI? |
 | :--- | :--- | :--- | :--- |
 | **1. Built-in Custom Web App (React/Vite + FastAPI)** ⭐ *(Primary)* | Low (`./run_dashboard.sh`) | **Interactive 1-Click Approval Deck** for On-Call Engineers (approve PRs, trigger backfills, retry DAGs). | **Yes** (`/dashboard` folder) |
 | **2. GCP Looker Studio** | Zero (`100% Free`) | **Executive Compliance & SLA Scorecard** connecting directly to BigQuery dataset `de_ops_metadata`. | **Yes** (Template URL provided) |

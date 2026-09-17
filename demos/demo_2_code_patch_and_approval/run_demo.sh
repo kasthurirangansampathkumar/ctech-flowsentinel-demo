@@ -8,7 +8,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================================================"
-echo "🎬 FlowSentinel AI - Demo 2: Autonomous Code Patch & 1-Click Approval"
+echo "🎬 SentinelView AI - Demo 2: Autonomous Code Patch & 1-Click Approval"
 echo "========================================================================"
 
 echo ""

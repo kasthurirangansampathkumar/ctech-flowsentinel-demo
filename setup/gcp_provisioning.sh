@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FlowSentinel AI - GCP Infrastructure Provisioning Script
+# SentinelView AI - GCP Infrastructure Provisioning Script
 # Prepared by: CTech Data Engineers
 # ==============================================================================
 set -eo pipefail

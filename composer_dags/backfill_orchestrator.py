@@ -1,4 +1,4 @@
-"""FlowSentinel AI -- Backfill Orchestrator.
+"""SentinelView AI -- Backfill Orchestrator.
 
 Materializes a dated snapshot of fact_orders into the backfill sandbox --
 the real counterpart to the Backfill Planning Agent's blast-radius plan.
