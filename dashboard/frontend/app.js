@@ -107,7 +107,9 @@ async function loadScorecard() {
 
   tbody.innerHTML = data.pipelines.length ? data.pipelines.map(p => `
     <tr>
-      <td><b>${p.name}</b></td>
+      <td>${p.airflow_url
+        ? `<a href="${p.airflow_url}" target="_blank" title="Open in Airflow (Cloud Composer)"><b>${p.name}</b></a>`
+        : `<b>${p.name}</b>`}</td>
       <td><div class="run-dots">${p.runs.map(r => `<div class="run-dot ${r}" title="${r}"></div>`).join("")}</div></td>
       <td>${badge(p.in_sla ? "In SLA" : "Breach", p.in_sla ? "green" : "red")}</td>
     </tr>

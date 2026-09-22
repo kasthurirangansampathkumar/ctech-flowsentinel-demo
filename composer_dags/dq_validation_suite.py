@@ -15,7 +15,7 @@ DAG_ID = "dq_validation_suite"
 with DAG(
     dag_id=DAG_ID,
     description="Checks dw_analytics.fact_orders for null cust_id and duplicate order_id.",
-    schedule="@hourly",
+    schedule="@daily",
     start_date=datetime(2026, 9, 1),
     catchup=False,
     default_args={"owner": "flowsentinel-ai", "retries": 0},

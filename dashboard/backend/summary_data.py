@@ -16,10 +16,21 @@ This is mode-aware, same as the ticket engine:
 import os
 import random
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "ctech-flowsentinel-ai")
 REGION = os.getenv("GCP_REGION", "us-central1")
 COMPOSER_ENV = os.getenv("COMPOSER_ENVIRONMENT", "ctech-flowsentinel-demo-dev")
+
+# Set once as a Cloud Run env var (see TEAMMATE_REPLICATION_GUIDE.md) rather than
+# fetched live -- it never changes for a given environment, so reading it as a
+# plain string keeps Demo Mode's "never touches real GCP" rule intact while still
+# letting a pipeline name link straight to its real Airflow DAG view.
+AIRFLOW_URI = os.getenv("COMPOSER_AIRFLOW_URI", "").rstrip("/")
+
+
+def _airflow_dag_url(dag_id: str) -> Optional[str]:
+    return f"{AIRFLOW_URI}/dags/{dag_id}/grid" if AIRFLOW_URI else None
 
 # SLA window for "most recent data" freshness -- a table is compliant if its
 # newest partition/row landed within this many days of now.
@@ -68,7 +79,7 @@ def _demo_pipeline_runs() -> dict:
     for name in DEMO_PIPELINES:
         runs = _seeded_run_history(name)
         in_sla = runs[-1] == "success"
-        pipelines.append({"name": name, "runs": runs, "in_sla": in_sla})
+        pipelines.append({"name": name, "runs": runs, "in_sla": in_sla, "airflow_url": _airflow_dag_url(name)})
 
     total = len(pipelines)
     in_sla_count = sum(1 for p in pipelines if p["in_sla"])
@@ -90,6 +101,7 @@ def _production_pipeline_runs() -> dict:
     env_name = f"projects/{PROJECT_ID}/locations/{REGION}/environments/{COMPOSER_ENV}"
     env = service.projects().locations().environments().get(name=env_name).execute()
     dag_gcs_prefix = env["config"]["dagGcsPrefix"]  # e.g. gs://bucket/dags
+    airflow_uri = env["config"].get("airflowUri", "").rstrip("/") or AIRFLOW_URI
 
     from google.cloud import storage
     bucket_name = dag_gcs_prefix.replace("gs://", "").split("/")[0]
@@ -129,7 +141,10 @@ def _production_pipeline_runs() -> dict:
             for days_ago in range(4, -1, -1)
         ]
         in_sla = runs[-1] == "success"
-        pipelines.append({"name": dag_id, "runs": runs, "in_sla": in_sla})
+        pipelines.append({
+            "name": dag_id, "runs": runs, "in_sla": in_sla,
+            "airflow_url": f"{airflow_uri}/dags/{dag_id}/grid" if airflow_uri else None,
+        })
 
     total = len(pipelines)
     in_sla_count = sum(1 for p in pipelines if p["in_sla"])

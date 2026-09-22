@@ -16,7 +16,7 @@ DAG_ID = "vendor_ecom_ingest"
 with DAG(
     dag_id=DAG_ID,
     description="Loads the vendor e-commerce orders feed from GCS into raw_staging.orders.",
-    schedule="@hourly",
+    schedule="@daily",
     start_date=datetime(2026, 9, 1),
     catchup=False,
     default_args={"owner": "flowsentinel-ai", "retries": 1, "retry_delay": timedelta(minutes=5)},

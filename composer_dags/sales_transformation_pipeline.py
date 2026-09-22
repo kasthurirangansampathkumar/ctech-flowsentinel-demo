@@ -14,7 +14,7 @@ DAG_ID = "sales_transformation_pipeline"
 with DAG(
     dag_id=DAG_ID,
     description="Stages raw_staging.orders and merges into dw_analytics.fact_orders.",
-    schedule="@hourly",
+    schedule="@daily",
     start_date=datetime(2026, 9, 1),
     catchup=False,
     default_args={"owner": "flowsentinel-ai", "retries": 1, "retry_delay": timedelta(minutes=5)},
